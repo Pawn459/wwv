@@ -201,9 +201,15 @@
                     </div>
 
                     <!-- Add New Watch Modal Trigger -->
-                    <button onclick="openAddModal()" class="flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-gold to-gold-dark text-obsidian font-semibold text-xs sm:text-sm hover:brightness-110 transition-all shadow-md">
+                    <button onclick="requireAdminAuth(() => openAddModal())" class="flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-gold to-gold-dark text-obsidian font-semibold text-xs sm:text-sm hover:brightness-110 transition-all shadow-md">
                         <i class="fa-solid fa-plus-circle"></i>
                         <span>เพิ่มรุ่นใหม่</span>
+                    </button>
+
+                    <!-- Admin Lock / Unlock Status Button -->
+                    <button id="adminStatusBtn" onclick="handleAdminStatusClick()" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-slateCard hover:bg-slateBorder text-slate-300 border border-slateBorder text-xs font-semibold transition-all" title="คลิกเพื่อปลดล็อกหรือล็อกสิทธิ์การแก้ไขข้อมูล">
+                        <i id="adminStatusIcon" class="fa-solid fa-lock text-cloneRed"></i>
+                        <span id="adminStatusText">ล็อกแก้ไข</span>
                     </button>
 
                     <!-- Export JSON -->
@@ -213,7 +219,7 @@
                     </button>
 
                     <!-- Import JSON -->
-                    <button onclick="document.getElementById('importJsonInput').click()" class="flex items-center gap-1.5 px-2.5 py-1.5 sm:py-2 rounded-xl bg-slateCard hover:bg-slateBorder text-slate-200 border border-slateBorder text-xs transition-all" title="นำเข้าไฟล์ฐานข้อมูล JSON จากคอมหรือมือถือ">
+                    <button onclick="requireAdminAuth(() => document.getElementById('importJsonInput').click())" class="flex items-center gap-1.5 px-2.5 py-1.5 sm:py-2 rounded-xl bg-slateCard hover:bg-slateBorder text-slate-200 border border-slateBorder text-xs transition-all" title="นำเข้าไฟล์ฐานข้อมูล JSON จากคอมหรือมือถือ">
                         <i class="fa-solid fa-file-import text-authGreen"></i>
                         <span>Import</span>
                     </button>
@@ -635,333 +641,333 @@
         </div>
     </div>
 
+    <!-- ==================== MODAL: APPRAISAL SLIP PREVIEW ==================== -->
+    <div id="slipModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slateCard border border-gold/50 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slateBorder pb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-file-invoice-dollar text-gold text-xl"></i>
+                    <h3 class="font-bold text-white text-base">ใบสรุปประเมินราคารับจำนำ (ChronoVault Slip)</h3>
+                </div>
+                <button onclick="closeSlipModal()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <pre id="slipTextContent" class="bg-obsidian border border-slateBorder rounded-xl p-4 text-xs font-mono text-slate-200 whitespace-pre-wrap leading-relaxed overflow-x-auto"></pre>
+            <div class="flex items-center justify-end gap-2.5 pt-2">
+                <button onclick="copySlipText()" class="px-4 py-2 rounded-xl bg-gold text-obsidian font-bold text-xs sm:text-sm hover:brightness-110 flex items-center gap-1.5">
+                    <i class="fa-solid fa-copy"></i> คัดลอกข้อความส่ง LINE / พิมพ์
+                </button>
+                <button onclick="closeSlipModal()" class="px-4 py-2 rounded-xl bg-slateDark border border-slateBorder text-xs sm:text-sm text-slate-300">
+                    ปิดหน้าต่าง
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: ADMIN PASSWORD / PIN AUTHENTICATION ==================== -->
+    <div id="adminAuthModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slateCard border border-gold/50 rounded-2xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slateBorder pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-xl bg-gold/15 border border-gold/40 flex items-center justify-center text-gold">
+                        <i class="fa-solid fa-shield-halved text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white text-base">ยืนยันรหัสผ่านผู้ได้รับอนุญาต</h3>
+                        <p class="text-xs text-slate-400">เฉพาะแอดมินหรือผู้ประเมินหลักเท่านั้นที่แก้ไขข้อมูลได้</p>
+                    </div>
+                </div>
+                <button onclick="closeAdminAuthModal()" class="w-8 h-8 rounded-lg bg-slateDark text-slate-400 hover:text-white flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Unlock Form -->
+            <form id="adminUnlockForm" onsubmit="submitAdminPin(event)" class="space-y-4">
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="text-xs font-semibold text-slate-300">กรอกรหัสผ่านแอดมิน (Admin PIN / Password)</label>
+                        <span class="text-[11px] font-mono text-gold/90">รหัสเริ่มต้น: 8888</span>
+                    </div>
+                    <div class="relative">
+                        <i class="fa-solid fa-key absolute left-3.5 top-1/2 -translate-y-1/2 text-gold text-sm"></i>
+                        <input id="adminPinInput" type="password" required placeholder="กรอกรหัสผ่านเพื่อปลดล็อก..." class="w-full pl-10 pr-4 py-2.5 bg-obsidian border border-slateBorder focus:border-gold rounded-xl text-base font-mono text-white tracking-widest focus:outline-none">
+                    </div>
+                    <p id="adminPinError" class="hidden text-xs text-cloneRed mt-1.5 font-medium">
+                        <i class="fa-solid fa-circle-exclamation mr-1"></i>รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง
+                    </p>
+                </div>
+
+                <div class="flex items-center justify-between pt-2 border-t border-slateBorder">
+                    <button type="button" onclick="toggleChangePinSection()" class="text-xs text-gold hover:underline flex items-center gap-1">
+                        <i class="fa-solid fa-gear"></i>
+                        <span>เปลี่ยนรหัสผ่านใหม่</span>
+                    </button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="closeAdminAuthModal()" class="px-4 py-2 rounded-xl bg-slateDark border border-slateBorder text-xs text-slate-300">
+                            ยกเลิก
+                        </button>
+                        <button type="submit" class="px-5 py-2 rounded-xl bg-gradient-to-r from-gold to-gold-dark text-obsidian font-bold text-xs sm:text-sm shadow-lg hover:brightness-110">
+                            <i class="fa-solid fa-unlock-keyhole mr-1"></i> ปลดล็อกระบบแก้ไข
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Change PIN Section (Expandable) -->
+            <form id="changePinForm" onsubmit="saveNewAdminPin(event)" class="hidden pt-4 border-t border-slateBorder space-y-3">
+                <h4 class="text-xs font-bold text-gold uppercase tracking-wider">ตั้งค่ารหัสผ่านผู้ได้รับอนุญาตใหม่</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">รหัสผ่านเดิม *</label>
+                        <input id="oldPinInput" type="password" required placeholder="รหัสเดิม" class="w-full bg-obsidian border border-slateBorder rounded-xl px-3 py-2 text-xs font-mono text-white focus:border-gold focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] text-slate-400 mb-1">รหัสผ่านใหม่ที่ต้องการ *</label>
+                        <input id="newPinInput" type="password" required minlength="4" placeholder="อย่างน้อย 4 ตัวอักษร" class="w-full bg-obsidian border border-slateBorder rounded-xl px-3 py-2 text-xs font-mono text-white focus:border-gold focus:outline-none">
+                    </div>
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit" class="px-4 py-1.5 rounded-xl bg-authGreen text-obsidian font-bold text-xs hover:brightness-110">
+                        บันทึกรหัสผ่านใหม่
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL: EDIT WATCH DATA (AUTHORIZED ONLY) ==================== -->
+    <div id="editWatchModal" class="fixed inset-0 z-50 hidden bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-slateCard border border-gold/50 rounded-2xl max-w-4xl w-full max-h-[92vh] overflow-y-auto shadow-2xl">
+            <div class="p-5 border-b border-slateBorder flex items-center justify-between sticky top-0 bg-slateCard z-10">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-lg bg-gold/15 border border-gold/40 flex items-center justify-center text-gold">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-base sm:text-lg font-bold text-white">แก้ไขข้อมูลนาฬิกาและจุดสังเกตแท้-ปลอม</h3>
+                            <span class="px-2 py-0.5 rounded bg-authGreen/20 text-authGreen border border-authGreen/40 text-[10px] font-mono font-bold">ADMIN UNLOCKED</span>
+                        </div>
+                        <p class="text-xs text-slate-400">ปรับปรุงข้อมูลสเปก ราคา 5 ตลาดโลก และจุดจับผิดงานโคลนของรุ่นนี้</p>
+                    </div>
+                </div>
+                <button onclick="closeEditWatchModal()" class="w-8 h-8 rounded-lg bg-slateDark text-slate-400 hover:text-white flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="editWatchForm" onsubmit="saveEditedWatch(event)" class="p-5 space-y-5 text-sm">
+                <!-- Basic Specs -->
+                <div class="space-y-3">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-gold flex items-center gap-1.5">
+                        <i class="fa-solid fa-clock"></i> 1. ข้อมูลพื้นฐานและรหัสรุ่น
+                    </h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1">แบรนด์ (Brand) *</label>
+                            <select id="editBrand" required class="w-full bg-slateDark border border-slateBorder rounded-xl px-3 py-2 text-white focus:border-gold focus:outline-none">
+                                <option value="Rolex">Rolex</option>
+                                <option value="Patek Philippe">Patek Philippe</option>
+                                <option value="Cartier">Cartier</option>
+                                <option value="Audemars Piguet">Audemars Piguet</option>
+                                <option value="Omega">Omega</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1">ชื่อรุ่น (Model Name) *</label>
+                            <input id="editModel" type="text" required class="w-full bg-slateDark border border-slateBorder rounded-xl px-3 py-2 text-white focus:border-gold focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1">รหัสรุ่น (Reference No.) *</label>
+                            <input id="editRef" type="text" required class="w-full bg-slateDark border border-slateBorder rounded-xl px-3 py-2 text-white font-mono focus:border-gold focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1">ฉายา / สีหน้าปัด (Nickname)</label>
+                            <input id="editNickname" type="text" class="w-full bg-slateDark border border-slateBorder rounded-xl px-3 py-2 text-white focus:border-gold focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1">ขนาดและวัสดุตัวเรือน (Case Size)</label>
+                            <input id="editCaseSize" type="text" class="w-full bg-slateDark border border-slateBorder rounded-xl px-3 py-2 text-white focus:border-gold focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1">ปีที่ผลิต (Production Years)</label>
+                            <input id="editYears" type="text" class="w-full bg-slateDark border border-slateBorder rounded-xl px-3 py-2 text-white focus:border-gold focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Movement & Timegrapher Specs -->
+                <div class="pt-3 border-t border-slateBorder space-y-3">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-gold flex items-center gap-1.5">
+                        <i class="fa-solid fa-gears"></i> 2. ข้อมูลกลไก ค่า Timegrapher และโรงงานโคลนเฝ้าระวัง
+                    </h4>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1">กลไก (Caliber) *</label>
+                            <input id="editCaliber" type="text" required class="w-full bg-slateDark border border-slateBorder rounded-xl px-3 py-2 text-white font-mono focus:border-gold focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1">ความถี่เครื่อง (VPH) *</label>
+                            <input id="editVph" type="text" required class="w-full bg-slateDark border border-slateBorder rounded-xl px-3 py-2 text-white font-mono focus:border-gold focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1">ค่า Lift Angle แท้ *</label>
+                            <input id="editLiftAngle" type="text" required class="w-full bg-slateDark border border-slateBorder rounded-xl px-3 py-2 text-white font-mono focus:border-gold focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1">ค่า Amplitude มาตรฐาน</label>
+                            <input id="editAmplitude" type="text" class="w-full bg-slateDark border border-slateBorder rounded-xl px-3 py-2 text-white font-mono focus:border-gold focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                        <div>
+                            <label class="block text-xs text-cloneRed font-semibold mb-1">โรงงานโคลนที่ต้องระวัง *</label>
+                            <input id="editCloneThreat" type="text" required class="w-full bg-slateDark border border-cloneRed/40 rounded-xl px-3 py-2 text-white focus:border-cloneRed focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1">สภาพคล่องตลาด (Liquidity)</label>
+                            <select id="editLiquidity" class="w-full bg-slateDark border border-slateBorder rounded-xl px-3 py-2 text-white focus:border-gold focus:outline-none">
+                                <option value="สูงมาก (ระดับเงินสด)">สูงมาก (ระดับเงินสด)</option>
+                                <option value="สูง">สูง</option>
+                                <option value="ปานกลาง">ปานกลาง</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1">แนวโน้มราคาตลาด (Market Trend)</label>
+                            <input id="editTrend" type="text" class="w-full bg-slateDark border border-slateBorder rounded-xl px-3 py-2 text-white focus:border-gold focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Global Market Prices (THB) -->
+                <div class="pt-3 border-t border-slateBorder space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-gold flex items-center gap-1.5">
+                            <i class="fa-solid fa-earth-americas"></i> 3. ราคาป้ายศูนย์ และราคาตลาดมือสอง 5 ประเทศ (หน่วย: บาท THB)
+                        </h4>
+                        <button type="button" onclick="autoFillGlobalPricesFromTH()" class="self-start sm:self-auto px-2.5 py-1 rounded-lg bg-gold/15 hover:bg-gold/25 border border-gold/40 text-gold text-[11px] font-semibold">
+                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>คำนวณราคา JP/HK/US/EU อัตโนมัติจากราคาไทย
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">ราคาป้ายศูนย์ MSRP *</label>
+                            <input id="editMsrpTHB" type="number" min="1000" max="999999999" required class="w-full bg-slateDark border border-slateBorder rounded-xl px-2.5 py-2 text-white font-mono text-xs focus:border-gold focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-authGreen font-bold mb-1">🇹🇭 ตลาดมือสองไทย *</label>
+                            <input id="editPriceTH" type="number" min="1000" max="999999999" required class="w-full bg-slateDark border border-authGreen/50 rounded-xl px-2.5 py-2 text-white font-mono text-xs focus:border-authGreen focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-300 mb-1">🇯🇵 ตลาดญี่ปุ่น (JP)</label>
+                            <input id="editPriceJP" type="number" min="1000" max="999999999" required class="w-full bg-slateDark border border-slateBorder rounded-xl px-2.5 py-2 text-white font-mono text-xs focus:border-gold focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-300 mb-1">🇭🇰 ตลาดฮ่องกง (HK)</label>
+                            <input id="editPriceHK" type="number" min="1000" max="999999999" required class="w-full bg-slateDark border border-slateBorder rounded-xl px-2.5 py-2 text-white font-mono text-xs focus:border-gold focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-300 mb-1">🇺🇸 ตลาดสหรัฐฯ (US)</label>
+                            <input id="editPriceUS" type="number" min="1000" max="999999999" required class="w-full bg-slateDark border border-slateBorder rounded-xl px-2.5 py-2 text-white font-mono text-xs focus:border-gold focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-300 mb-1">🇪🇺 ยุโรป/Chrono24</label>
+                            <input id="editPriceEU" type="number" min="1000" max="999999999" required class="w-full bg-slateDark border border-slateBorder rounded-xl px-2.5 py-2 text-white font-mono text-xs focus:border-gold focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Authenticity vs Super Clone Spotter Details -->
+                <div class="pt-3 border-t border-slateBorder space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-gold flex items-center gap-1.5">
+                            <i class="fa-solid fa-microscope"></i> 4. จุดสังเกตของแท้ vs จุดตายของปลอม (ขึ้นบรรทัดใหม่เพื่อแยกเป็นข้อย่อย)
+                        </h4>
+                    </div>
+
+                    <!-- Dial Spotter -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                            <label class="block text-xs text-authGreen font-semibold mb-1">หมวด 1: หน้าปัด/เข็ม/กระจก (ของแท้)</label>
+                            <textarea id="editDialAuth" rows="3" class="w-full bg-slateDark border border-authGreen/40 rounded-xl px-3 py-2 text-xs text-white focus:border-authGreen focus:outline-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-cloneRed font-semibold mb-1">หมวด 1: หน้าปัด/เข็ม/กระจก (จุดตายของปลอม)</label>
+                            <textarea id="editDialFake" rows="3" class="w-full bg-slateDark border border-cloneRed/40 rounded-xl px-3 py-2 text-xs text-white focus:border-cloneRed focus:outline-none"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Case Spotter -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                            <label class="block text-xs text-authGreen font-semibold mb-1">หมวด 2: ตัวเรือน/ขอบ/สาย (ของแท้)</label>
+                            <textarea id="editCaseAuth" rows="3" class="w-full bg-slateDark border border-authGreen/40 rounded-xl px-3 py-2 text-xs text-white focus:border-authGreen focus:outline-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-cloneRed font-semibold mb-1">หมวด 2: ตัวเรือน/ขอบ/สาย (จุดตายของปลอม)</label>
+                            <textarea id="editCaseFake" rows="3" class="w-full bg-slateDark border border-cloneRed/40 rounded-xl px-3 py-2 text-xs text-white focus:border-cloneRed focus:outline-none"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Movement Spotter -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                            <label class="block text-xs text-authGreen font-semibold mb-1">หมวด 3: กลไกภายใน/ล้อสมดุล (ของแท้)</label>
+                            <textarea id="editMoveAuth" rows="3" class="w-full bg-slateDark border border-authGreen/40 rounded-xl px-3 py-2 text-xs text-white focus:border-authGreen focus:outline-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-cloneRed font-semibold mb-1">หมวด 3: กลไกภายใน/ล้อสมดุล (จุดตายของปลอม)</label>
+                            <textarea id="editMoveFake" rows="3" class="w-full bg-slateDark border border-cloneRed/40 rounded-xl px-3 py-2 text-xs text-white focus:border-cloneRed focus:outline-none"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Timegrapher Spotter & Checklist -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                            <label class="block text-xs text-authGreen font-semibold mb-1">หมวด 4: เกณฑ์เครื่องแท้บน Timegrapher</label>
+                            <textarea id="editTgAuth" rows="2" class="w-full bg-slateDark border border-authGreen/40 rounded-xl px-3 py-2 text-xs text-white focus:border-authGreen focus:outline-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-cloneRed font-semibold mb-1">หมวด 4: อาการเครื่องโคลนบน Timegrapher</label>
+                            <textarea id="editTgFake" rows="2" class="w-full bg-slateDark border border-cloneRed/40 rounded-xl px-3 py-2 text-xs text-white focus:border-cloneRed focus:outline-none"></textarea>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-gold font-semibold mb-1">รายการ Checklist ตรวจหน้างาน (บรรทัดละ 1 ข้อ)</label>
+                        <textarea id="editChecklist" rows="4" class="w-full bg-slateDark border border-gold/40 rounded-xl px-3 py-2 text-xs text-white focus:border-gold focus:outline-none"></textarea>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slateBorder">
+                    <button type="button" onclick="closeEditWatchModal(); openManagePhotosModal(selectedWatchId);" class="px-3.5 py-2 rounded-xl bg-gold/15 hover:bg-gold/25 text-gold border border-gold/40 text-xs font-semibold flex items-center gap-1.5">
+                        <i class="fa-solid fa-images"></i>
+                        <span>จัดการรูปภาพอ้างอิง 5 มุมของรุ่นนี้</span>
+                    </button>
+                    <div class="flex items-center gap-2.5">
+                        <button type="button" onclick="closeEditWatchModal()" class="px-4 py-2 rounded-xl bg-slateDark text-slate-300 hover:text-white border border-slateBorder text-xs sm:text-sm">
+                            ยกเลิก
+                        </button>
+                        <button type="submit" class="px-5 py-2 rounded-xl bg-gradient-to-r from-gold to-gold-dark text-obsidian font-bold text-xs sm:text-sm shadow-lg hover:brightness-110">
+                            <i class="fa-solid fa-floppy-disk mr-1.5"></i> บันทึกการแก้ไขข้อมูล
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- ==================== APPLICATION LOGIC & HOROLOGY DATABASE ==================== -->
     <script>
         const EXCHANGE_RATE_THB_PER_USD = 34.50;
         const STORAGE_KEY = 'CHRONOVAULT_PRO_WATCH_DB_V3';
-
-        // Default Horological Database (8 Iconic Models with Deep Watchmaker Specs)
-        const DEFAULT_WATCH_DB = [
-            {
-                id: 'rolex-126610ln',
-                brand: 'Rolex',
-                model: 'Submariner Date 41mm',
-                nickname: 'Sub Date Black Ceramic',
-                ref: '126610LN',
-                caliber: 'Cal. 3235',
-                caseSize: '41 mm / Oystersteel 904L',
-                years: '2020 – ปัจจุบัน',
-                vph: '28,800 vph (4 Hz)',
-                liftAngle: '53°',
-                amplitudeRange: '270° – 310° (ลานเต็ม)',
-                powerReserve: '70 ชั่วโมง (Chronergy Escapement)',
-                cloneThreat: 'VSF (VS3235) / Clean Factory',
-                liquidity: 'สูงมาก (ระดับเงินสด)',
-                trend: 'ทรงตัวแข็งแกร่ง (Blue-Chip)',
-                msrpTHB: 385200,
-                marketsTHB: {
-                    th: 445000,
-                    jp: 458000,
-                    hk: 438000,
-                    us: 449000,
-                    eu: 455000
-                },
-                dialColor: '#0E1318',
-                bezelColor: '#1B222C',
-                accentColor: '#10B981',
-                spotter: {
-                    dial: {
-                        auth: [
-                            'เลเซอร์มงกุฎใต้กระจกที่ 6 นาฬิกา (LEC) ประกอบด้วยจุดไมโครละเอียดคมชัด มองตาเปล่าแทบไม่เห็น ต้องส่องไฟเฉียง',
-                            'เลนส์ขยายวันที่ Cyclops ขยาย 2.5 เท่า เคลือบสารตัดแสงสะท้อน AR อมฟ้าอ่อนๆ ตัวเลขวันที่ฟอนต์หนาเต็มช่องพอดี',
-                            'มงกุฎ Rolex เล็กตรงกลางระหว่างคำว่า SWISS และ MADE ที่ตำแหน่ง 6 นาฬิกา มีมิติสีขาวคมกริบ ไม่เยิ้ม'
-                        ],
-                        fake: [
-                            'งาน VSF/Clean เลเซอร์มงกุฎที่กระจกมักยิงลึกและชัดเกินจริง มองเห็นได้ง่ายด้วยตาเปล่า',
-                            'ขอบหน้าต่างวันที่ (Date Window) มุมตัด 45 องศาไม่เนียนเท่าของแท้ และฟอนต์เลขสองหลักเช่น "23" หรือ "28" มักเอียงนิดๆ',
-                            'พรายน้ำ Chromalight ในจุด Pearl ที่ 12 นาฬิกาของปลอมมักอมเขียวหรือสว่างจ้าผิดเฉดฟ้าแท้เมื่อเทียบในที่มืด'
-                        ]
-                    },
-                    case: {
-                        auth: [
-                            'ร่องตัวเลขขอบเซรามิก Cerachrom เคลือบละอองแพลทินัมแท้ (PVD Platinum) สีเงินสว่างประกายเมทัลลิกเนียนละเอียด',
-                            'การสลักขอบใน (Rehaut) คำว่า ROLEX ตรงกับขีดนาทีทุกขีด 100% ผิวร่องตัวอักษรยิงเลเซอร์ทรายละเอียดเงางาม',
-                            'สัมผัสการหมุนเกลียวเม็ดมะยม Triplock นุ่มแน่น ไม่มีเสียงครืดของเกลียวสแตนเลสเสียดสีกัน'
-                        ],
-                        fake: [
-                            'สีในร่องตัวเลขขอบเซรามิกของโคลนมักออกสีเทาหม่น และเมื่อใช้งานไปนานๆ สีจะหมองคล้ำได้ง่าย',
-                            'Serial Number ที่ขอบใน Rehaut ของโรงงานโคลนมักซ้ำรหัสเดิม (เช่น ล็อต Q66T หรือ रหัสโรงงาน VSF/Clean ที่เช็คซ้ำได้)',
-                            'ขอบบานพับ Glidelock ด้านในมีคราบคมจากการปั๊มโลหะ ไม่ลบมุมเนียนกริบระดับของแท้'
-                        ]
-                    },
-                    movement: {
-                        auth: [
-                            'ล้อสมดุล (Balance Wheel) เป็นระบบ Free-Sprung แท้ ปรับตั้งด้วยน็อตทอง Microstella 4 ตัวด้านใน ไม่มีก้านเขี่ยปรับช้า-เร็วเด็ดขาด',
-                            'สะพานจักรสมดุล (Balance Bridge) ทรงทะลุ 2 ขา ขัดลายสวยงาม พร้อมทับทิมกันสะเทือน Paraflex แท้สีชมพูอมม่วงใส',
-                            'จักรปล่อย (Chronergy Escapement) ผลิตจากนิกเกิล-ฟอสฟอรัส มีฉลุช่องโปร่งคมกริบระดับไมครอน'
-                        ],
-                        fake: [
-                            'จุดตายชัดเจนที่สุด: เครื่องโคลน VS3235 / DD3235 แม้จะทำก้านหลอก แต่ยังมี "ก้านปรับช้า-เร็ว (Regulator Pins)" ซ่อนอยู่ใต้สะพานจักร!',
-                            'การลบมุม (Anglage) ที่ขอบสะพานจักรเป็นการปาดด้วยเครื่อง CNC หยาบๆ เมื่อส่องกล้อง 10x จะเห็นรอยเส้นใบมีด',
-                            'ความรู้สึกตอนหมุนตั้งเวลาเข็มยาวของเครื่องโคลนจะมีระยะฟรี (Backlash) เล็กน้อย ไม่นิ่งสนิทเหมือน Cal. 3235 แท้'
-                        ]
-                    },
-                    timegrapher: {
-                        auth: 'ต้องตั้งค่าเครื่อง Timegrapher ที่ Lift Angle = 53° เท่านั้น เครื่องแท้ลานเต็มจะได้ Amplitude 275°–305° และเส้นกราฟนิ่งตรง',
-                        fake: 'เครื่องโคลนหลายรุ่นหากตั้ง Lift Angle 53° ค่า Amplitude มักจะต่ำผิดปกติ (เช่น 220°–245°) หรือมีสัญญาณรบกวนจุดคู่ (Scattered dots)'
-                    }
-                },
-                checklist: [
-                    'ตรวจสอบรหัส Serial ที่ขอบใน Rehaut ว่าไม่ตรงกับรหัสโรงงาน VSF / Clean (เช่น Q66, 2R9)',
-                    'ส่องกล้อง 10x ดูผงแพลทินัมในร่องขอบเซรามิก Cerachrom และจุดพรายน้ำ Pearl ที่ 12 นาฬิกา',
-                    'ทดสอบการหมุนเม็ดมะยมจังหวะขึ้นลานและจังหวะกระโดดวันที่ตอนเที่ยงคืนตรง (Instantaneous Date Jump)',
-                    'เปิดฝาหลังส่องล้อสมดุล: ยืนยันว่าเป็น Free-sprung Microstella แท้ (ไม่มีก้านปรับ Regulator ซ่อนอยู่)',
-                    'ขึ้นเครื่อง Timegrapher ที่ Lift Angle 53° ตรวจสอบความถี่ 28,800 vph และ Amplitude > 265°'
-                ]
-            },
-            {
-                id: 'rolex-116500ln',
-                brand: 'Rolex',
-                model: 'Cosmograph Daytona',
-                nickname: 'Daytona Panda White Dial',
-                ref: '116500LN',
-                caliber: 'Cal. 4130',
-                caseSize: '40 mm / Oystersteel 904L',
-                years: '2016 – 2023',
-                vph: '28,800 vph (4 Hz)',
-                liftAngle: '52°',
-                amplitudeRange: '280° – 315° (ปิดโครโนกราฟ)',
-                powerReserve: '72 ชั่วโมง (Vertical Clutch)',
-                cloneThreat: 'Clean Factory / BTF (SA4130 / DD4130)',
-                liquidity: 'สูงมาก (ระดับเงินสด)',
-                trend: 'ขาขึ้น (เลิกผลิต Discontinued)',
-                msrpTHB: 550000,
-                marketsTHB: {
-                    th: 1020000,
-                    jp: 1065000,
-                    hk: 995000,
-                    us: 1035000,
-                    eu: 1048000
-                },
-                dialColor: '#F8FAFC',
-                bezelColor: '#18181B',
-                accentColor: '#EF4444',
-                spotter: {
-                    dial: {
-                        auth: [
-                            'วงหน้าปัดย่อยสีดำ (Sub-dials) มีลายวงแหวนละเอียด (Concentric guilloché) ที่สะท้อนแสงอย่างนุ่มนวล ไม่เงาวับเหมือนแผ่นพลาสติก',
-                            'คำว่า "DAYTONA" สีแดงโค้งเหนือวง 6 นาฬิกา เป็นสีแดงเชอร์รี่ด้านมีมิติความนูนของหมึกพิมพ์ (Pad printing) คมชัด',
-                            'โคนเข็มจับเวลาวินาทีและเข็มวงย่อยมีฝาครอบแกนเข็ม (Center Cap) ทรงกลมมนได้สัดส่วนสมบูรณ์แบบ'
-                        ],
-                        fake: [
-                            'งาน Clean / BTF สีขาวของหน้าปัดมักออกขาวอมฟ้าเย็น (Cold White) หรือขาวครีมผิดเฉดเมื่อวางเทียบเรือนแท้',
-                            'รูแกนกลางของเข็มวงย่อย (Sub-dial hands) ของปลอมมักเห็นรูบุ๋มหรือรอยบีบปลอกเข็มเมื่อส่องกล้อง 10x',
-                            'มาร์คเกอร์หลักชั่วโมงทองคำขาว 18k ของปลอมใช้สแตนเลสชุบโรเดียม ความเงาอมเหลืองอบอุ่นแบบทองคำขาวแท้จะไม่มี'
-                        ]
-                    },
-                    case: {
-                        auth: [
-                            'ขอบเซรามิก Tachymeter ตัวเลขคมกริบ ระยะห่างระหว่างขอบตัวเลขกับขอบนอกสุดสมมาตรรอบวง',
-                            'ขาตัวเรือน (Lugs) ทั้งสองฝั่งของ Daytona 116500LN มีความอสมมาตรตามดีไซน์แท้ (ขาฝั่งขวาจะบางกว่าฝั่งซ้ายเล็กน้อย)',
-                            'ปุ่มกดจับเวลา (Chronograph Pushers) กดแล้วคลิกคมแน่นด้วยระบบ Column Wheel แท้'
-                        ],
-                        fake: [
-                            'ฟอนต์คำว่า "UNITS PER HOUR" บนขอบเซรามิกของโคลนบางล็อตมีความหนาเกินจริงและสีแพลทินัมไม่สม่ำเสมอ',
-                            'เกลียวปลดล็อกปุ่มกดจับเวลา (Screw-down pushers) หมุนแล้วฝืดหรือมีระยะคลอน',
-                            'น้ำหนักตัวเรือนและสายรวมของแท้ต้องได้พิกัดมาตรฐาน (ประมาณ 140-142 กรัม สำหรับสายครบข้อ)'
-                        ]
-                    },
-                    movement: {
-                        auth: [
-                            'Cal. 4130 แท้ ใช้ใยสายใยสีฟ้า Parachrom Blue แท้ พร้อมล้อสมดุล Free-sprung Microstella ไม่มีก้านเขี่ยปรับความไว',
-                            'จักร Column Wheel ขัดเงากระจก (Black Polish) คมชัด และชุด Vertical Clutch ทำงานเนียนทำให้เข็มวินาทีจับเวลาเดินไม่กระตุก',
-                            'สีทับทิมและลวดลายการปัดลายก้นหอยบนสะพานจักรคมลึกเป็นประกายรุ้งเมื่อกระทบแสง'
-                        ],
-                        fake: [
-                            'เครื่องโคลน DD4130 (Dandong) ลอกเลียนแบบโครงสร้างได้ดีมาก แต่ยังมีก้านเขี่ย Regulator ซ่อนอยู่ใต้สะพานจักรสมดุล!',
-                            'ใยสายใยสีฟ้าของเครื่องโคลนเป็นการชุบสีฟ้าที่ผิวโลหะธรรมดา ไม่ใช่โลหะผสม Niobium-Zirconium แท้',
-                            'หัวสกรูยึดสะพานจักรเมื่อส่องกล้องกำลังขยายสูงจะพบรอยบิ่นจากการประกอบในโรงงานจีนและขอบสกรูไม่ลบมุม'
-                        ]
-                    },
-                    timegrapher: {
-                        auth: 'ตั้งค่า Lift Angle = 52° (สำคัญมาก Cal.4130 ใช้ 52° ไม่ใช่ 53°) เมื่อเปิดจับเวลา Chronograph ค่า Amplitude ต้องลดลงไม่เกิน 15°–20°',
-                        fake: 'เครื่องโคลน 4130 เมื่อกดเปิดฟังก์ชันจับเวลาทิ้งไว้ ค่า Amplitude มักแกว่งขึ้นลงแรงและ Beat Error ขยับเกิน 0.6 ms'
-                    }
-                },
-                checklist: [
-                    'ส่องกล้อง 10x ดูหมึกพิมพ์สีแดงคำว่า DAYTONA และฝาครอบแกนเข็มวงย่อยทั้ง 3 วง',
-                    'ทดสอบการกดปุ่ม Start/Stop/Reset โครโนกราฟ เข็มต้องดีดกลับที่ 12 นาฬิกาตรงเป๊ะไม่มีสะท้อน',
-                    'เปิดฝาหลังตรวจเช็คล้อสมดุล Free-sprung แท้ (ต้องไม่มีก้านปรับช้า-เร็วคู่ซ่อนใต้สะพานจักร)',
-                    'ส่องตรวจงานขัดเงา Column Wheel และสีของใยสายใย Parachrom Blue',
-                    'วัดผล Timegrapher ที่ Lift Angle 52° ทั้งตอนปิดและเปิดระบบจับเวลา Chronograph'
-                ]
-            },
-            {
-                id: 'rolex-126334',
-                brand: 'Rolex',
-                model: 'Datejust 41 Fluted Jubilee',
-                nickname: 'Datejust 41 Blue / Wimbledon',
-                ref: '126334',
-                caliber: 'Cal. 3235',
-                caseSize: '41 mm / Steel & 18k White Gold Bezel',
-                years: '2017 – ปัจจุบัน',
-                vph: '28,800 vph (4 Hz)',
-                liftAngle: '53°',
-                amplitudeRange: '270° – 310°',
-                powerReserve: '70 ชั่วโมง',
-                cloneThreat: 'Clean Factory / VSF',
-                liquidity: 'สูงมาก (ระดับเงินสด)',
-                trend: 'ทรงตัว (รุ่นยอดนิยมตลาดไทย)',
-                msrpTHB: 388800,
-                marketsTHB: {
-                    th: 435000,
-                    jp: 448000,
-                    hk: 429000,
-                    us: 440000,
-                    eu: 445000
-                },
-                dialColor: '#1E3A8A',
-                bezelColor: '#E2E8F0',
-                accentColor: '#60A5FA',
-                spotter: {
-                    dial: {
-                        auth: [
-                            'พื้นผิวหน้าปัด Sunburst (สีน้ำเงิน/เขียว/เทา Wimbledon) มีเส้นรัศมีละเอียดระดับนาโนที่กระจายแสงนุ่มนวลจากกึ่งกลาง',
-                            'หลักชั่วโมงและเข็มทำจากทองคำขาว 18k แท้ มีความเงาฉ่ำอมโทนอุ่นเล็กน้อย ไม่ขาวซีดเหมือนสแตนเลส',
-                            'ฟอนต์คำว่า DATEJUST คมกริบ ไม่หนาเกินไป และหน้าต่างวันที่ตัดมุมคมชัด'
-                        ],
-                        fake: [
-                            'หน้าปัด Wimbledon ของปลอม ขอบสีเขียวรอบตัวเลขโรมันมักพิมพ์เหลื่อมหรือสีเขียวสว่างผิดเพี้ยนจากของแท้',
-                            'ลาย Sunburst ของหน้าปัดโคลนมักเห็นเป็นเส้นหยาบกว่าของแท้เมื่อส่องใต้ไฟขาวโดยตรง'
-                        ]
-                    },
-                    case: {
-                        auth: [
-                            'ขอบหยัก (Fluted Bezel) ของแท้ผลิตจากทองคำขาว 18k (Solid White Gold) ให้ประกายสีขาวอมแชมเปญอุ่นๆ และสันหยักคมกริบสะท้อนแสงวิบวับพิเศษ',
-                            'สาย Jubilee 5 แถว ขอบข้อสายด้านในลบมุมเนียนเรียบดุจแพรไหม ไม่มีคมบาดนิ้วแม้แต่น้อย'
-                        ],
-                        fake: [
-                            'จุดสังเกตสำคัญ: ขอบหยักของโคลนทำจากสแตนเลสสตีล (หรือชุบแพลทินัม/ทองคำขาวบางๆ) แสงสะท้อนจะออกขาวเย็นแข็งๆ และน้ำหนักเบากว่าขอบทองคำขาวแท้',
-                            'ข้อสาย Jubilee ของปลอมเมื่อจับบิดซ้าย-ขวาจะมีเสียงเอี๊ยดเบาๆ และขอบด้านในข้อสายยังมีความคม'
-                        ]
-                    },
-                    movement: {
-                        auth: [
-                            'ขับเคลื่อนด้วยเครื่อง Cal. 3235 แท้ ระบบล้อสมดุล Free-sprung Microstella ไร้ก้านปรับช้า-เร็ว',
-                            'โรเตอร์ขึ้นลานตลับลูกปืนรุ่นใหม่หมุนนุ่มเงียบและแกะสลักมงกุฎ Rolex ลึกคมชัด'
-                        ],
-                        fake: [
-                            'เครื่องโคลน VS3235 หรือ VR3235 มีก้านเขี่ยปรับเวลา (Regulator Curb Pins) ซ่อนอยู่ตรงแกนล้อสมดุล',
-                            'หากเป็นงานเกรดรองที่วางเครื่อง 2824/2836 ดัดแปลง การหมุนเม็ดมะยมตั้งเข็มจะเป็นคนละทิศทางกับ Cal. 3235 แท้'
-                        ]
-                    },
-                    timegrapher: {
-                        auth: 'ตั้งค่า Lift Angle = 53° ความถี่ 28,800 vph ค่า Amplitude ปกติ 270°–305° Beat Error ไม่เกิน 0.3 ms',
-                        fake: 'เครื่องโคลนมักให้ค่า Amplitude ตกเมื่อวางในแนวตั้ง (Crown Down / Crown Left) เกินกว่า 40 องศา'
-                    }
-                },
-                checklist: [
-                    'ตรวจเช็คสีและประกายของขอบหยัก Fluted Bezel ว่ามีโทนอุ่นของทองคำขาว 18k แท้ (สามารถใช้เครื่องเช็คเปอร์เซ็นต์โลหะ XRF ยืนยันได้ทันที)',
-                    'ส่องกล้องดูลาย Sunburst บนหน้าปัดและฟอนต์ตัวเลขวันที่ภายใต้เลนส์ Cyclops',
-                    'สัมผัสความเนียนของสาย Jubilee และตรวจสอบรหัสปั๊มที่บานพับ Oysterclasp',
-                    'เปิดฝาหลังตรวจดูล้อสมดุล Free-sprung ของเครื่อง Cal. 3235 แท้',
-                    'วัดค่า Timegrapher ที่ Lift Angle 53°'
-                ]
-            },
-            {
-                id: 'patek-5711',
-                brand: 'Patek Philippe',
-                model: 'Nautilus 40mm Blue Dial',
-                nickname: 'Nautilus Jumbo Steel',
-                ref: '5711/1A-010',
-                caliber: 'Cal. 26-330 S C (หรือ 324 S C)',
-                caseSize: '40 mm (ความหนาเพียง 8.3 mm)',
-                years: '2006 – 2021',
-                vph: '28,800 vph (4 Hz)',
-                liftAngle: '51°',
-                amplitudeRange: '275° – 310°',
-                powerReserve: '45 ชั่วโมง',
-                cloneThreat: '3KF / PPF (Super Clone 324/330)',
-                liquidity: 'สูง',
-                trend: 'ทรงตัวระดับ Ultra-Luxury',
-                msrpTHB: 1080000,
-                marketsTHB: {
-                    th: 3650000,
-                    jp: 3780000,
-                    hk: 3590000,
-                    us: 3720000,
-                    eu: 3750000
-                },
-                dialColor: '#1E3A5F',
-                bezelColor: '#94A3B8',
-                accentColor: '#D4AF37',
-                spotter: {
-                    dial: {
-                        auth: [
-                            'สีหน้าปัดน้ำเงินอมเขียวเทาไล่เฉด (Blue-Black Graduated) ร่องแนวนอนมีความโค้งมนที่สันร่องและสะท้อนแสงเป็นมิติลึก',
-                            'หลักชั่วโมงทองคำขาว 18k ขัดเงาที่ขอบอย่างประณีต ไม่แบนทื่อ และจุดบอกนาทีรอบนอกกลมคมกริบ',
-                            'ฟอนต์ PATEK PHILIPPE GENEVE พิมพ์ลงในกรอบเรียบด้วยความคมชัดสูงสุด ไม่มีรอยหมึกแตก'
-                        ],
-                        fake: [
-                            'หน้าปัดโรงงาน 3KF / PPF สีน้ำเงินมักสว่างหรืออมม่วง/เขียวผิดเฉด และสันร่องแนวนอนดูแข็งเป็นเหลี่ยมเกินไป',
-                            'ช่องวันที่ที่ 3 นาฬิกาของปลอม กรอบโลหะหรือระยะห่างของตัวเลขวันที่มักชิดขอบซ้ายหรือขวาเกินไป'
-                        ]
-                    },
-                    case: {
-                        auth: [
-                            'ความหนาตัวเรือนบางเฉียบเพียง 8.3 มม. หูตัวเรือนทั้งสองข้าง (Nautilus Ears) โค้งรับกับขอบแปดเหลี่ยมมนอย่างไร้รอยต่อ',
-                            'ข้อสายสแตนเลสมีความยืดหยุ่นทิ้งตัวแนบข้อมือสูงมาก หมุดยึดสายเรียบเนียนไปกับด้านข้างของสาย',
-                            'กระจกฝาหลัง Sapphire โชว์เครื่องที่อยู่ชิดขอบฝาหลังอย่างสมดุล'
-                        ],
-                        fake: [
-                            'งานโคลนบางรุ่นตัวเรือนหนาเกิน 8.5–8.8 มม. หรือมีการปาดขอบตัวเรือนแต่ง (Mod) จนเสียสัดส่วนเดิม',
-                            'ข้อสายแรกที่ติดกับตัวเรือน (End-links) ของปลอมมักแข็งทื่อ ไม่พับทิ้งตัวลงมาแนบสนิทเหมือนของแท้'
-                        ]
-                    },
-                    movement: {
-                        auth: [
-                            'จุดชี้ขาด (โชว์หลังเปลือย): ล้อสมดุล Gyromax® แท้ของ Patek ใช้ตุ้มน้ำหนักผ่าซีกปรับสมดุลบนวงล้อ ไม่มีก้านเขี่ยปรับความไว (No Regulator Pins) บนสะพานจักรเด็ดขาด!',
-                            'โรเตอร์ทองคำแท้ 21k แกะสลักตรา Calatrava Cross ลึกคมชัด พร้อมลายขัด Côtes de Genève แบบโค้งและลบมุมสะพานจักรด้วยมือ (Hand-chamfered)',
-                            'ตรารับรอง Patek Philippe Seal (PP) สลักด้วยเลเซอร์คมชัดและฝังสีทองนวล'
-                        ],
-                        fake: [
-                            'จุดตายของเครื่องโคลน 3KF / PPF: ส่องที่สะพานจักรสมดุลจะเห็น "ติ่งก้านปรับช้า-เร็ว" หรือหมุดยึดสายใยแบบเครื่อง Miyota/Clone ที่ซ่อนไว้ และตุ้ม Gyromax บนล้อสมดุลเป็นเพียงของตกแต่งที่หมุนปรับจริงไม่ได้!',
-                            'โรเตอร์ของโคลนเป็นทองเหลืองชุบทอง เสียงหมุนโรเตอร์จะดังแกรกกรากกว่าทองคำ 21k แท้มาก',
-                            'การลบมุมสะพานจักร (Anglage) ของปลอมเป็นรอยตัดตรงๆ ไม่มีความโค้งมนเงางามจากการขัดด้วยมือ'
-                        ]
-                    },
-                    timegrapher: {
-                        auth: 'ตั้งค่า Lift Angle = 51° ความถี่ 28,800 vph เครื่องแท้ Patek Seal มีความเที่ยงตรงสูงมาก (-3 ถึง +2 วินาที/วัน)',
-                        fake: 'เครื่องโคลนบางตัวเป็นเครื่อง Miyota 9015 แปลงเพลทหน้า หรือเครื่องโคลน 324 ที่ค่า Beat Error และเสียงการทำงานบนไมโครโฟน Timegrapher ดังผิดปกติ'
-                    }
-                },
-                checklist: [
-                    'ใช้กล้องกำลังขยาย 10x–30x ส่องฝาหลังเปลือยที่ล้อสมดุล Gyromax: ยืนยันว่าไม่มีก้านเขี่ยปรับเวลา (Regulator) และเป็น Free-sprung แท้ 100%',
-                    'ตรวจสอบการลบมุมโค้งด้วยมือ (Hand-finished Anglage) บนขอบสะพานจักรทุกชิ้นและตรา PP Seal',
-                    'วัดความหนาตัวเรือนด้วยเวอร์เนียร์คาลิปเปอร์ (หุ้มเทปกันรอย) ต้องได้ 8.3 มม. ตามสเปกแท้',
-                    'ตรวจสอบสีหน้าปัดไล่เฉด Blue-Black และความยืดหยุ่นของสายสแตนเลส',
-                    'ตรวจสอบใบรับประกัน Certificate of Origin ภายใต้แสง UV เพื่อเช็คลายน้ำ Patek Philippe แท้'
-                ]
-            },
-            {
-                id: 'patek-5167a',
-                brand: 'Patek Philippe',
-                model: 'Aquanaut 40.8mm Steel',
-                nickname: 'Aquanaut Tropical Strap',
-                ref: '5167A-001',
-                caliber: 'Cal. 324 S C (หรือ 26-330 S C)',
-                caseSize: '40.8 mm (หนา 8.1 mm)',
-                years: '2007 – ปัจจุบัน',
-                vph: '28,800 vph (4 Hz)',
-                liftAngle: '51°',
-                amplitudeRange: '275° – 310°',
-                powerReserve: '45 ชั่วโมง',
-                cloneThreat: '3KF / ZF Factory',
-                liquidity: 'สูงมาก (ระดับเงินสด)',
-                trend: 'ขาขึ้น (ความต้องการสูงมาก)',
-                msrpTHB: 865000,
-                marketsTHB: {
-                    th: 2150000,
+        const ADMIN_PIN_STORAGE_KEY = 'CHRONOVAULT_ADMIN_PIN_V3';
                     jp: 2240000,
                     hk: 2110000,
                     us: 2190000,
@@ -1276,10 +1282,118 @@
         let newWatchTempImages = { front: '', movement: '', bezel: '', clasp: '', macro: '' };
         let managingPhotosWatchId = null;
 
+        // ==================== ADMIN AUTHENTICATION STATE ====================
+        let isAdminUnlocked = false;
+        let pendingAdminCallback = null;
+
+        function getAdminPin() {
+            return localStorage.getItem(ADMIN_PIN_STORAGE_KEY) || '8888';
+        }
+
+        function updateAdminStatusUI() {
+            const btn = document.getElementById('adminStatusBtn');
+            const icon = document.getElementById('adminStatusIcon');
+            const text = document.getElementById('adminStatusText');
+            if (!btn || !icon || !text) return;
+
+            if (isAdminUnlocked) {
+                btn.className = 'flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-authGreen/15 hover:bg-authGreen/25 text-authGreen border border-authGreen/40 text-xs font-semibold transition-all';
+                icon.className = 'fa-solid fa-unlock-keyhole text-authGreen';
+                text.textContent = 'ปลดล็อกแก้ไขแล้ว';
+            } else {
+                btn.className = 'flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl bg-slateCard hover:bg-slateBorder text-slate-300 border border-slateBorder text-xs font-semibold transition-all';
+                icon.className = 'fa-solid fa-lock text-cloneRed';
+                text.textContent = 'ล็อกแก้ไข';
+            }
+        }
+
+        function handleAdminStatusClick() {
+            if (isAdminUnlocked) {
+                isAdminUnlocked = false;
+                updateAdminStatusUI();
+                renderSelectedWatchDetail();
+                showToast('ล็อกระบบการแก้ไขข้อมูลเรียบร้อยแล้ว', 'info');
+            } else {
+                requireAdminAuth(() => {
+                    showToast('ปลดล็อกสิทธิ์ผู้ได้รับอนุญาตสำเร็จ สามารถแก้ไขข้อมูลได้ทันที', 'success');
+                });
+            }
+        }
+
+        function requireAdminAuth(callback) {
+            if (isAdminUnlocked) {
+                if (typeof callback === 'function') callback();
+                return;
+            }
+            pendingAdminCallback = callback;
+            const modal = document.getElementById('adminAuthModal');
+            const pinInput = document.getElementById('adminPinInput');
+            const errEl = document.getElementById('adminPinError');
+            const changeForm = document.getElementById('changePinForm');
+            if (errEl) errEl.classList.add('hidden');
+            if (changeForm) changeForm.classList.add('hidden');
+            if (pinInput) {
+                pinInput.value = '';
+                setTimeout(() => pinInput.focus(), 80);
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeAdminAuthModal() {
+            document.getElementById('adminAuthModal').classList.add('hidden');
+            pendingAdminCallback = null;
+        }
+
+        function submitAdminPin(e) {
+            e.preventDefault();
+            const pinInput = document.getElementById('adminPinInput');
+            const errEl = document.getElementById('adminPinError');
+            const entered = (pinInput.value || '').trim();
+            if (entered === getAdminPin()) {
+                isAdminUnlocked = true;
+                updateAdminStatusUI();
+                renderSelectedWatchDetail();
+                const cb = pendingAdminCallback;
+                closeAdminAuthModal();
+                if (typeof cb === 'function') cb();
+            } else {
+                if (errEl) errEl.classList.remove('hidden');
+                pinInput.value = '';
+                pinInput.focus();
+            }
+        }
+
+        function toggleChangePinSection() {
+            const form = document.getElementById('changePinForm');
+            if (form) form.classList.toggle('hidden');
+        }
+
+        function saveNewAdminPin(e) {
+            e.preventDefault();
+            const oldPin = document.getElementById('oldPinInput').value.trim();
+            const newPin = document.getElementById('newPinInput').value.trim();
+            if (oldPin !== getAdminPin()) {
+                showToast('รหัสผ่านเดิมไม่ถูกต้อง ไม่สามารถเปลี่ยนรหัสได้', 'info');
+                return;
+            }
+            if (newPin.length < 4) {
+                showToast('รหัสผ่านใหม่ต้องมีอย่างน้อย 4 ตัวอักษร', 'info');
+                return;
+            }
+            localStorage.setItem(ADMIN_PIN_STORAGE_KEY, newPin);
+            document.getElementById('oldPinInput').value = '';
+            document.getElementById('newPinInput').value = '';
+            document.getElementById('changePinForm').classList.add('hidden');
+            isAdminUnlocked = true;
+            updateAdminStatusUI();
+            showToast('เปลี่ยนรหัสผ่านแอดมินใหม่เรียบร้อยแล้ว!', 'success');
+        }
+
         // Initialize App & PWA
         window.onload = function() {
             initPWAFeatures();
             loadDatabase();
+            updateAdminStatusUI();
             renderCatalog();
             selectWatch(selectedWatchId, false);
         };
@@ -1805,53 +1919,53 @@
                     } else {
                         mobBtn.className = 'flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-400 hover:text-white transition-all';
                     }
-                });
-            }
-        }
-
-        // Delete Watch & Reset Database Confirmation Logic
+        // Delete Watch & Reset Database Confirmation Logic (Protected by Admin Auth)
         function confirmDeleteWatch(event, id, modelName) {
             event.stopPropagation();
-            if (watchDB.length <= 1) {
-                showToast('ต้องมีนาฬิกาอย่างน้อย 1 รุ่นในระบบ', 'info');
-                return;
-            }
-            const modal = document.getElementById('confirmDeleteModal');
-            document.getElementById('confirmModalTitle').textContent = 'ยืนยันการลบรายการนาฬิกา';
-            document.getElementById('confirmModalDesc').textContent = `ต้องการลบ "${modelName}" ออกจากฐานข้อมูลใช่หรือไม่?`;
-            const btn = document.getElementById('confirmModalActionBtn');
-            btn.textContent = 'ลบรายการนี้';
-            btn.onclick = function() {
-                watchDB = watchDB.filter(w => w.id !== id);
-                saveDatabase();
-                if (selectedWatchId === id && watchDB.length > 0) {
-                    selectedWatchId = watchDB[0].id;
+            requireAdminAuth(() => {
+                if (watchDB.length <= 1) {
+                    showToast('ต้องมีนาฬิกาอย่างน้อย 1 รุ่นในระบบ', 'info');
+                    return;
                 }
-                renderCatalog();
-                renderSelectedWatchDetail();
-                closeConfirmModal();
-                showToast(`ลบรายการ "${modelName}" เรียบร้อยแล้ว`, 'info');
-            };
-            modal.classList.remove('hidden');
+                const modal = document.getElementById('confirmDeleteModal');
+                document.getElementById('confirmModalTitle').textContent = 'ยืนยันการลบรายการนาฬิกา';
+                document.getElementById('confirmModalDesc').textContent = `ต้องการลบ "${modelName}" ออกจากฐานข้อมูลใช่หรือไม่?`;
+                const btn = document.getElementById('confirmModalActionBtn');
+                btn.textContent = 'ลบรายการนี้';
+                btn.onclick = function() {
+                    watchDB = watchDB.filter(w => w.id !== id);
+                    saveDatabase();
+                    if (selectedWatchId === id && watchDB.length > 0) {
+                        selectedWatchId = watchDB[0].id;
+                    }
+                    renderCatalog();
+                    renderSelectedWatchDetail();
+                    closeConfirmModal();
+                    showToast(`ลบรายการ "${modelName}" เรียบร้อยแล้ว`, 'info');
+                };
+                modal.classList.remove('hidden');
+            });
         }
 
         function openResetDbModal() {
-            const modal = document.getElementById('confirmDeleteModal');
-            document.getElementById('confirmModalTitle').textContent = 'รีเซ็ตฐานข้อมูลเริ่มต้น (8 รุ่นหลัก)';
-            document.getElementById('confirmModalDesc').textContent = 'ระบบจะล้างรายการที่เพิ่มเองและคืนค่าเป็น 8 รุ่นมาตรฐานเริ่มต้น ยืนยันหรือไม่?';
-            const btn = document.getElementById('confirmModalActionBtn');
-            btn.textContent = 'รีเซ็ตฐานข้อมูล';
-            btn.onclick = function() {
-                localStorage.removeItem(STORAGE_KEY);
-                watchDB = JSON.parse(JSON.stringify(DEFAULT_WATCH_DB));
-                selectedWatchId = watchDB[0].id;
-                saveDatabase();
-                renderCatalog();
-                renderSelectedWatchDetail();
-                closeConfirmModal();
-                showToast('รีเซ็ตฐานข้อมูลกลับเป็น 8 รุ่นมาตรฐานเรียบร้อย!', 'success');
-            };
-            modal.classList.remove('hidden');
+            requireAdminAuth(() => {
+                const modal = document.getElementById('confirmDeleteModal');
+                document.getElementById('confirmModalTitle').textContent = 'รีเซ็ตฐานข้อมูลเริ่มต้น (8 รุ่นหลัก)';
+                document.getElementById('confirmModalDesc').textContent = 'ระบบจะล้างรายการที่เพิ่มเองและคืนค่าเป็น 8 รุ่นมาตรฐานเริ่มต้น ยืนยันหรือไม่?';
+                const btn = document.getElementById('confirmModalActionBtn');
+                btn.textContent = 'รีเซ็ตฐานข้อมูล';
+                btn.onclick = function() {
+                    localStorage.removeItem(STORAGE_KEY);
+                    watchDB = JSON.parse(JSON.stringify(DEFAULT_WATCH_DB));
+                    selectedWatchId = watchDB[0].id;
+                    saveDatabase();
+                    renderCatalog();
+                    renderSelectedWatchDetail();
+                    closeConfirmModal();
+                    showToast('รีเซ็ตฐานข้อมูลกลับเป็น 8 รุ่นมาตรฐานเรียบร้อย!', 'success');
+                };
+                modal.classList.remove('hidden');
+            });
         }
 
         function closeConfirmModal() {
@@ -1896,17 +2010,23 @@
                 <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-5">
                     <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                         <div class="flex flex-col items-center gap-2">
-                            <div onclick="openManagePhotosModal('${w.id}')" title="คลิกเพื่อเพิ่มหรือเปลี่ยนรูปนาฬิกา" class="cursor-pointer p-2.5 rounded-2xl bg-obsidian border border-gold/40 hover:border-gold shadow-inner relative group">
+                            <div onclick="requireAdminAuth(() => openManagePhotosModal('${w.id}'))" title="คลิกเพื่อเพิ่มหรือเปลี่ยนรูปนาฬิกา" class="cursor-pointer p-2.5 rounded-2xl bg-obsidian border border-gold/40 hover:border-gold shadow-inner relative group">
                                 ${renderWatchThumbnail(w, 'w-20 h-20')}
                                 <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex flex-col items-center justify-center text-[10px] text-gold font-bold">
                                     <i class="fa-solid fa-camera text-sm mb-0.5"></i>
                                     <span>เปลี่ยนรูป</span>
                                 </div>
                             </div>
-                            <button onclick="openManagePhotosModal('${w.id}')" class="px-2.5 py-1 rounded-lg bg-gold/15 hover:bg-gold/25 border border-gold/40 text-gold text-[11px] font-semibold flex items-center gap-1 transition-all">
-                                <i class="fa-solid fa-images"></i>
-                                <span>จัดการรูป 5 มุม (${uploadedAnglesCount}/5)</span>
-                            </button>
+                            <div class="flex flex-wrap items-center justify-center gap-1.5">
+                                <button onclick="requireAdminAuth(() => openManagePhotosModal('${w.id}'))" class="px-2.5 py-1 rounded-lg bg-gold/15 hover:bg-gold/25 border border-gold/40 text-gold text-[11px] font-semibold flex items-center gap-1 transition-all">
+                                    <i class="fa-solid fa-images"></i>
+                                    <span>รูป 5 มุม (${uploadedAnglesCount}/5)</span>
+                                </button>
+                                <button onclick="requireAdminAuth(() => openEditWatchModal('${w.id}'))" class="px-2.5 py-1 rounded-lg bg-slateCard hover:bg-gold hover:text-obsidian border border-gold/50 text-gold-light text-[11px] font-semibold flex items-center gap-1 transition-all shadow">
+                                    <i class="fa-solid ${isAdminUnlocked ? 'fa-pen-to-square' : 'fa-lock'}"></i>
+                                    <span>แก้ไขข้อมูลรุ่นนี้</span>
+                                </button>
+                            </div>
                         </div>
                         <div>
                             <div class="flex flex-wrap items-center gap-2">
@@ -2024,7 +2144,7 @@
                             <p class="text-xs text-slate-400 mt-0.5">เลือกมุมที่ต้องการส่องตรวจ อัปโหลดรูปของแท้เก็บเข้าฐานข้อมูล หรือนำรูปนาฬิกาจริงตรงหน้ามาวางซูมเทียบแบบจุดต่อจุด</p>
                         </div>
                         <div class="flex flex-wrap items-center gap-2 shrink-0">
-                            <button onclick="openManagePhotosModal('${w.id}')" class="px-3 py-1.5 rounded-xl bg-slateCard hover:bg-slateBorder text-gold border border-gold/40 text-xs font-semibold flex items-center gap-1.5 transition-all">
+                            <button onclick="requireAdminAuth(() => openManagePhotosModal('${w.id}'))" class="px-3 py-1.5 rounded-xl bg-slateCard hover:bg-slateBorder text-gold border border-gold/40 text-xs font-semibold flex items-center gap-1.5 transition-all">
                                 <i class="fa-solid fa-cloud-arrow-up"></i>
                                 <span>อัปโหลด/แก้ไขรูปทั้ง 5 มุม</span>
                             </button>
@@ -2078,13 +2198,13 @@
                                     <p class="text-[11px] text-slate-400">${currentAngleObj.desc}</p>
                                 </div>
                                 <div class="flex items-center gap-1.5">
-                                    <label class="cursor-pointer px-2.5 py-1 rounded-lg bg-gold/15 hover:bg-gold/25 text-gold border border-gold/40 text-[11px] font-semibold flex items-center gap-1">
+                                    <button onclick="requireAdminAuth(() => document.getElementById('singleAngleUploadInput').click())" class="cursor-pointer px-2.5 py-1 rounded-lg bg-gold/15 hover:bg-gold/25 text-gold border border-gold/40 text-[11px] font-semibold flex items-center gap-1">
                                         <i class="fa-solid fa-upload"></i>
                                         <span>${currentRefImg ? 'เปลี่ยนรูปมุมนี้' : 'อัปโหลดรูปมุมนี้'}</span>
-                                        <input type="file" accept="image/*" class="hidden" onchange="uploadSingleAnglePhoto(event, '${w.id}', '${activeGalleryAngle}')">
-                                    </label>
+                                    </button>
+                                    <input id="singleAngleUploadInput" type="file" accept="image/*" class="hidden" onchange="uploadSingleAnglePhoto(event, '${w.id}', '${activeGalleryAngle}')">
                                     ${currentRefImg ? `
-                                        <button onclick="removeSingleAnglePhoto('${w.id}', '${activeGalleryAngle}')" title="ลบรูปมุมนี้" class="px-2 py-1 rounded-lg bg-cloneRed/15 hover:bg-cloneRed/30 text-cloneRed border border-cloneRed/30 text-[11px]">
+                                        <button onclick="requireAdminAuth(() => removeSingleAnglePhoto('${w.id}', '${activeGalleryAngle}'))" title="ลบรูปมุมนี้" class="px-2 py-1 rounded-lg bg-cloneRed/15 hover:bg-cloneRed/30 text-cloneRed border border-cloneRed/30 text-[11px]">
                                             <i class="fa-solid fa-trash-can"></i>
                                         </button>
                                     ` : ''}
@@ -3084,6 +3204,141 @@
             document.getElementById('addWatchModal').classList.add('hidden');
         }
 
+        // ==================== FULL WATCH DATA EDITOR (PASSWORD PROTECTED) ====================
+        function openEditWatchModal(watchId) {
+            const w = watchDB.find(item => item.id === watchId);
+            if (!w) return;
+
+            document.getElementById('editBrand').value = w.brand || 'Rolex';
+            document.getElementById('editModel').value = w.model || '';
+            document.getElementById('editRef').value = w.ref || '';
+            document.getElementById('editNickname').value = w.nickname || '';
+            document.getElementById('editCaseSize').value = w.caseSize || '';
+            document.getElementById('editYears').value = w.years || '';
+
+            document.getElementById('editCaliber').value = w.caliber || '';
+            document.getElementById('editVph').value = w.vph || '';
+            document.getElementById('editLiftAngle').value = w.liftAngle || '';
+            document.getElementById('editAmplitude').value = w.amplitudeRange || '';
+            document.getElementById('editCloneThreat').value = w.cloneThreat || '';
+            document.getElementById('editLiquidity').value = w.liquidity || 'สูงมาก (ระดับเงินสด)';
+            document.getElementById('editTrend').value = w.trend || '';
+
+            document.getElementById('editMsrpTHB').value = w.msrpTHB || 0;
+            document.getElementById('editPriceTH').value = (w.marketsTHB && w.marketsTHB.th) || 0;
+            document.getElementById('editPriceJP').value = (w.marketsTHB && w.marketsTHB.jp) || 0;
+            document.getElementById('editPriceHK').value = (w.marketsTHB && w.marketsTHB.hk) || 0;
+            document.getElementById('editPriceUS').value = (w.marketsTHB && w.marketsTHB.us) || 0;
+            document.getElementById('editPriceEU').value = (w.marketsTHB && w.marketsTHB.eu) || 0;
+
+            document.getElementById('editDialAuth').value = (w.spotter?.dial?.auth || []).join('\n');
+            document.getElementById('editDialFake').value = (w.spotter?.dial?.fake || []).join('\n');
+            document.getElementById('editCaseAuth').value = (w.spotter?.case?.auth || []).join('\n');
+            document.getElementById('editCaseFake').value = (w.spotter?.case?.fake || []).join('\n');
+            document.getElementById('editMoveAuth').value = (w.spotter?.movement?.auth || []).join('\n');
+            document.getElementById('editMoveFake').value = (w.spotter?.movement?.fake || []).join('\n');
+            document.getElementById('editTgAuth').value = w.spotter?.timegrapher?.auth || '';
+            document.getElementById('editTgFake').value = w.spotter?.timegrapher?.fake || '';
+            document.getElementById('editChecklist').value = (w.checklist || []).join('\n');
+
+            document.getElementById('editWatchModal').classList.remove('hidden');
+        }
+
+        function closeEditWatchModal() {
+            document.getElementById('editWatchModal').classList.add('hidden');
+        }
+
+        function autoFillGlobalPricesFromTH() {
+            const thVal = Math.min(999999999, Math.max(1000, parseFloat(document.getElementById('editPriceTH').value) || 0));
+            if (!thVal) return;
+            document.getElementById('editPriceJP').value = Math.round(thVal * 1.035);
+            document.getElementById('editPriceHK').value = Math.round(thVal * 0.98);
+            document.getElementById('editPriceUS').value = Math.round(thVal * 1.015);
+            document.getElementById('editPriceEU').value = Math.round(thVal * 1.025);
+            showToast('คำนวณราคาตลาด JP / HK / US / EU อัตโนมัติจากฐานราคาไทยเรียบร้อย', 'info');
+        }
+
+        function parseMultilineList(text) {
+            return (text || '')
+                .split('\n')
+                .map(line => line.trim())
+                .filter(Boolean);
+        }
+
+        function clampPrice(val, fallback = 350000) {
+            const num = parseFloat(val);
+            if (isNaN(num) || num < 0) return fallback;
+            return Math.min(999999999, Math.round(num));
+        }
+
+        function saveEditedWatch(e) {
+            e.preventDefault();
+            const idx = watchDB.findIndex(item => item.id === selectedWatchId);
+            if (idx === -1) return;
+
+            const w = watchDB[idx];
+            w.brand = document.getElementById('editBrand').value;
+            w.model = document.getElementById('editModel').value.trim();
+            w.ref = document.getElementById('editRef').value.trim();
+            w.nickname = document.getElementById('editNickname').value.trim();
+            w.caseSize = document.getElementById('editCaseSize').value.trim();
+            w.years = document.getElementById('editYears').value.trim();
+
+            w.caliber = document.getElementById('editCaliber').value.trim();
+            w.vph = document.getElementById('editVph').value.trim();
+            w.liftAngle = document.getElementById('editLiftAngle').value.trim();
+            w.amplitudeRange = document.getElementById('editAmplitude').value.trim();
+            w.cloneThreat = document.getElementById('editCloneThreat').value.trim();
+            w.liquidity = document.getElementById('editLiquidity').value;
+            w.trend = document.getElementById('editTrend').value.trim();
+
+            w.msrpTHB = clampPrice(document.getElementById('editMsrpTHB').value, w.msrpTHB);
+            const priceTH = clampPrice(document.getElementById('editPriceTH').value, w.marketsTHB.th);
+            w.marketsTHB = {
+                th: priceTH,
+                jp: clampPrice(document.getElementById('editPriceJP').value, Math.round(priceTH * 1.035)),
+                hk: clampPrice(document.getElementById('editPriceHK').value, Math.round(priceTH * 0.98)),
+                us: clampPrice(document.getElementById('editPriceUS').value, Math.round(priceTH * 1.015)),
+                eu: clampPrice(document.getElementById('editPriceEU').value, Math.round(priceTH * 1.025))
+            };
+
+            const dialAuth = parseMultilineList(document.getElementById('editDialAuth').value);
+            const dialFake = parseMultilineList(document.getElementById('editDialFake').value);
+            const caseAuth = parseMultilineList(document.getElementById('editCaseAuth').value);
+            const caseFake = parseMultilineList(document.getElementById('editCaseFake').value);
+            const moveAuth = parseMultilineList(document.getElementById('editMoveAuth').value);
+            const moveFake = parseMultilineList(document.getElementById('editMoveFake').value);
+            const newChecklist = parseMultilineList(document.getElementById('editChecklist').value);
+
+            w.spotter = {
+                dial: {
+                    auth: dialAuth.length ? dialAuth : ['สเปกหน้าปัดและชุดเข็มแท้ตามมาตรฐานโรงงานสวิส'],
+                    fake: dialFake.length ? dialFake : ['ระวังสีหน้าปัดและฟอนต์งานโคลน']
+                },
+                case: {
+                    auth: caseAuth.length ? caseAuth : ['ตัวเรือนและขอบเซรามิก/โลหะคมชัดตามสเปกแท้'],
+                    fake: caseFake.length ? caseFake : ['ระวังรหัสตัวเรือนซ้ำล็อตโรงงานโคลน']
+                },
+                movement: {
+                    auth: moveAuth.length ? moveAuth : [`เครื่องแท้ ${w.caliber} ล้อสมดุล Free-sprung`],
+                    fake: moveFake.length ? moveFake : ['ระวังก้านปรับช้า-เร็วซ่อนใต้สะพานจักรสมดุล']
+                },
+                timegrapher: {
+                    auth: document.getElementById('editTgAuth').value.trim() || `ตั้งค่า Lift Angle = ${w.liftAngle} ความถี่ ${w.vph}`,
+                    fake: document.getElementById('editTgFake').value.trim() || 'ระวังค่า Amplitude ต่ำผิดปกติหรือเส้นกราฟซ้อน'
+                }
+            };
+
+            w.checklist = newChecklist.length ? newChecklist : ['ตรวจสอบจุดสังเกตแท้-ปลอมและผล Timegrapher'];
+            checklistState[w.id] = new Array(w.checklist.length).fill(false);
+
+            saveDatabase();
+            closeEditWatchModal();
+            renderCatalog();
+            renderSelectedWatchDetail();
+            showToast(`บันทึกการแก้ไขข้อมูล ${w.brand} ${w.model} (Ref. ${w.ref}) เรียบร้อยแล้ว!`, 'success');
+        }
+
         function saveNewWatch(e) {
             e.preventDefault();
             const brand = document.getElementById('newBrand').value;
@@ -3093,8 +3348,8 @@
             const vph = document.getElementById('newVph').value.trim();
             const liftAngle = document.getElementById('newLiftAngle').value.trim();
             const liquidity = document.getElementById('newLiquidity').value;
-            const msrpTHB = parseFloat(document.getElementById('newMsrpTHB').value) || 350000;
-            const priceTH = parseFloat(document.getElementById('newPriceTH').value) || 400000;
+            const msrpTHB = clampPrice(document.getElementById('newMsrpTHB').value, 350000);
+            const priceTH = clampPrice(document.getElementById('newPriceTH').value, 400000);
             const cloneThreat = document.getElementById('newCloneThreat').value.trim();
             const authSpot = document.getElementById('newAuthSpot').value.trim();
             const fakeSpot = document.getElementById('newFakeSpot').value.trim();
