@@ -1909,26 +1909,41 @@
             showToast(`สลับการแสดงผลสกุลเงินเป็น ${curr === 'THB' ? 'บาท (฿ THB)' : 'ดอลลาร์สหรัฐ ($ USD)'}`, 'info');
         }
 
-        // Render Watch Thumbnail (Uses uploaded front photo if available, otherwise falls back to SVG)
+        // Helper to get the primary photo from database if any angle is uploaded
+        function getWatchPrimaryPhoto(watch) {
+            if (!watch || !watch.images) return '';
+            return watch.images.front || watch.images.bezel || watch.images.movement || watch.images.clasp || watch.images.macro || '';
+        }
+
+        // Render Watch Thumbnail (Uses uploaded database photo if available, otherwise renders model-accurate SVG)
         function renderWatchThumbnail(watch, sizeClass = "w-16 h-16") {
-            if (watch.images && watch.images.front) {
+            const primaryPhoto = getWatchPrimaryPhoto(watch);
+            if (primaryPhoto) {
                 return `
                     <div class="${sizeClass} shrink-0 rounded-xl overflow-hidden border border-gold/50 bg-obsidian relative shadow-md">
-                        <img src="${watch.images.front}" alt="${watch.model}" class="w-full h-full object-cover" onerror="this.style.display='none'">
-                        <span class="absolute bottom-0.5 right-0.5 px-1 py-0.2 rounded bg-obsidian/80 text-[8px] font-mono text-gold border border-gold/30">PHOTO</span>
+                        <img src="${primaryPhoto}" alt="${watch.model}" class="w-full h-full object-cover" onerror="this.style.display='none'">
+                        <span class="absolute bottom-0.5 right-0.5 px-1 py-0.2 rounded bg-obsidian/80 text-[8px] font-mono text-gold border border-gold/30">DB</span>
                     </div>
                 `;
             }
             return generateWatchSVG(watch, sizeClass);
         }
 
-        // Detailed Technical SVG Generator for each of the 5 Inspection Angles (Fallback when no photo uploaded yet)
+        // Detailed Technical SVG Generator for each of the 5 Inspection Angles (Matches the specific watch in database)
         function generateAngleReferenceSVG(watch, angleKey) {
+            const primaryPhoto = getWatchPrimaryPhoto(watch);
             if (angleKey === 'front') {
+                if (primaryPhoto) {
+                    return `
+                        <div class="w-full h-full flex flex-col items-center justify-center p-2 bg-obsidian select-none">
+                            <img src="${primaryPhoto}" alt="${watch.model}" class="max-h-full max-w-full object-contain rounded-lg">
+                        </div>
+                    `;
+                }
                 return `
                     <div class="w-full h-full flex flex-col items-center justify-center p-4 bg-obsidian select-none">
                         ${generateWatchSVG(watch, 'w-44 h-44 sm:w-52 sm:h-52')}
-                        <span class="text-[11px] font-mono text-gold mt-2">${watch.brand} Ref. ${watch.ref} — มุมหน้าปัดตรง (กดอัปโหลดรูปจริงเพื่อใช้เทียบได้)</span>
+                        <span class="text-[11px] font-mono text-gold mt-2">${watch.brand} ${watch.model} (Ref. ${watch.ref})</span>
                     </div>
                 `;
             } else if (angleKey === 'movement') {
@@ -1937,46 +1952,37 @@
                         <svg class="w-44 h-44 sm:w-52 sm:h-52" viewBox="0 0 200 200" fill="none">
                             <circle cx="100" cy="100" r="88" fill="#10141D" stroke="#D4AF37" stroke-width="3"/>
                             <circle cx="100" cy="100" r="78" fill="none" stroke="#334155" stroke-width="2" stroke-dasharray="6 3"/>
-                            <!-- Bridges -->
                             <path d="M30 85 Q100 65 170 85 L160 135 Q100 115 40 135 Z" fill="#1E293B" stroke="#94A3B8" stroke-width="1.5"/>
-                            <!-- Free-sprung Balance Wheel -->
                             <circle cx="100" cy="110" r="34" fill="#080A0E" stroke="#D4AF37" stroke-width="4"/>
-                            <!-- Microstella / Gyromax Inner Weights -->
                             <circle cx="100" cy="80" r="3.5" fill="#10B981"/>
                             <circle cx="100" cy="140" r="3.5" fill="#10B981"/>
                             <circle cx="70" cy="110" r="3.5" fill="#10B981"/>
                             <circle cx="130" cy="110" r="3.5" fill="#10B981"/>
-                            <!-- Parachrom / Hairspring -->
                             <circle cx="100" cy="110" r="18" fill="none" stroke="#38BDF8" stroke-width="1.5" stroke-dasharray="4 2"/>
                             <circle cx="100" cy="110" r="7" fill="#EC4899"/>
-                            <!-- Single Stud Holder (No clone regulator pins) -->
                             <rect x="93" y="64" width="14" height="8" rx="2" fill="#10B981"/>
                             <text x="100" y="42" text-anchor="middle" fill="#D4AF37" font-size="10" font-family="monospace" font-weight="bold">${watch.caliber} FREE-SPRUNG</text>
                             <text x="100" y="56" text-anchor="middle" fill="#10B981" font-size="8.5" font-family="monospace">NO REGULATOR PINS (LIFT ${watch.liftAngle})</text>
                         </svg>
-                        <span class="text-[11px] font-mono text-authGreen mt-1">แผนผังล้อสมดุลแท้ ${watch.caliber} (อัปโหลดรูปเครื่องจริงทับได้)</span>
+                        <span class="text-[11px] font-mono text-authGreen mt-1">${watch.brand} ${watch.caliber} (${watch.vph})</span>
                     </div>
                 `;
             } else if (angleKey === 'bezel') {
                 return `
                     <div class="w-full h-full flex flex-col items-center justify-center p-4 bg-obsidian select-none">
-                        <svg class="w-44 h-44 sm:w-52 sm:h-52" viewBox="0 0 200 200" fill="none">
-                            <!-- Side Case & Bezel Profile -->
-                            <rect x="25" y="78" width="150" height="44" rx="10" fill="#334155" stroke="#94A3B8" stroke-width="2"/>
-                            <!-- Fluted / Ceramic Bezel Teeth Profile -->
-                            <path d="M35 78 L42 64 L52 78 L60 64 L70 78 L78 64 L88 78 L96 64 L106 78 L114 64 L124 78 L132 64 L142 78 L150 64 L160 78" fill="#1E293B" stroke="#D4AF37" stroke-width="2"/>
-                            <!-- Sapphire Crystal & Cyclops Profile -->
-                            <rect x="42" y="54" width="116" height="10" rx="3" fill="#38BDF8" fill-opacity="0.25" stroke="#38BDF8" stroke-width="1.5"/>
-                            <path d="M118 54 Q128 43 138 54" fill="#38BDF8" fill-opacity="0.45" stroke="#38BDF8" stroke-width="1.5"/>
-                            <!-- Crown & Crown Guard -->
-                            <circle cx="100" cy="100" r="16" fill="#1E293B" stroke="#D4AF37" stroke-width="2.5"/>
-                            <circle cx="100" cy="100" r="3" fill="#D4AF37"/>
-                            <circle cx="92" cy="107" r="2" fill="#D4AF37"/>
-                            <circle cx="108" cy="107" r="2" fill="#D4AF37"/>
-                            <text x="100" y="34" text-anchor="middle" fill="#D4AF37" font-size="10" font-family="monospace" font-weight="bold">BEZEL & CROWN PROFILE</text>
-                            <text x="100" y="150" text-anchor="middle" fill="#94A3B8" font-size="9" font-family="monospace">${watch.caseSize}</text>
-                        </svg>
-                        <span class="text-[11px] font-mono text-gold mt-1">มุมสันตัวเรือน ขอบเซรามิก/หยัก และเม็ดมะยม</span>
+                        <div class="flex items-center justify-center gap-4">
+                            ${generateWatchSVG(watch, 'w-32 h-32 sm:w-36 sm:h-36')}
+                            <svg class="w-32 h-32 sm:w-36 sm:h-36" viewBox="0 0 160 160" fill="none">
+                                <rect x="15" y="62" width="130" height="36" rx="8" fill="#334155" stroke="#94A3B8" stroke-width="2"/>
+                                <path d="M24 62 L30 50 L38 62 L46 50 L54 62 L62 50 L70 62 L78 50 L86 62 L94 50 L102 62 L110 50 L118 62 L126 50 L134 62" fill="${watch.bezelColor || '#1E293B'}" stroke="#D4AF37" stroke-width="1.8"/>
+                                <rect x="30" y="42" width="100" height="8" rx="2" fill="#38BDF8" fill-opacity="0.25" stroke="#38BDF8" stroke-width="1.2"/>
+                                <circle cx="80" cy="80" r="14" fill="#1E293B" stroke="#D4AF37" stroke-width="2.2"/>
+                                <circle cx="80" cy="80" r="2.5" fill="#D4AF37"/>
+                                <text x="80" y="26" text-anchor="middle" fill="#D4AF37" font-size="8.5" font-family="monospace" font-weight="bold">REF. ${watch.ref}</text>
+                                <text x="80" y="125" text-anchor="middle" fill="#94A3B8" font-size="7.5" font-family="monospace">${watch.caseSize}</text>
+                            </svg>
+                        </div>
+                        <span class="text-[11px] font-mono text-gold mt-2">ทรงตัวเรือน ขอบ และเม็ดมะยมของ ${watch.brand} Ref. ${watch.ref}</span>
                     </div>
                 `;
             } else if (angleKey === 'clasp') {
@@ -1985,31 +1991,30 @@
                         <svg class="w-44 h-44 sm:w-52 sm:h-52" viewBox="0 0 200 200" fill="none">
                             <rect x="35" y="45" width="130" height="110" rx="14" fill="#161C28" stroke="#94A3B8" stroke-width="2.5"/>
                             <rect x="48" y="60" width="104" height="80" rx="8" fill="#080A0E" stroke="#D4AF37" stroke-width="1.5" stroke-dasharray="4 2"/>
-                            <text x="100" y="92" text-anchor="middle" fill="#D4AF37" font-size="12" font-family="serif" font-weight="bold">${watch.brand.toUpperCase()}</text>
-                            <text x="100" y="110" text-anchor="middle" fill="#10B981" font-size="9" font-family="monospace">LASER HALLMARK & CLASP CODE</text>
-                            <text x="100" y="126" text-anchor="middle" fill="#94A3B8" font-size="8.5" font-family="monospace">CLEAN CHAMFERED EDGES</text>
+                            <text x="100" y="90" text-anchor="middle" fill="#D4AF37" font-size="11" font-family="serif" font-weight="bold">${watch.brand.toUpperCase()}</text>
+                            <text x="100" y="106" text-anchor="middle" fill="#E2E8F0" font-size="9" font-family="monospace">REF. ${watch.ref}</text>
+                            <text x="100" y="124" text-anchor="middle" fill="#10B981" font-size="8" font-family="monospace">AUTHENTIC CLASP & HALLMARK</text>
                         </svg>
-                        <span class="text-[11px] font-mono text-gold mt-1">มุมบานพับสาย รหัสปั๊ม และงานลบมุมข้อสาย</span>
+                        <span class="text-[11px] font-mono text-gold mt-1">จุดสังเกตบานพับและรหัสสาย ${watch.brand} (${watch.model})</span>
                     </div>
                 `;
             } else {
+                const brandUpper = (watch.brand || 'SWISS').toUpperCase();
                 return `
                     <div class="w-full h-full flex flex-col items-center justify-center p-4 bg-obsidian select-none">
                         <svg class="w-44 h-44 sm:w-52 sm:h-52" viewBox="0 0 200 200" fill="none">
-                            <!-- Rehaut Ring & LEC Crown -->
-                            <circle cx="100" cy="100" r="82" fill="#0F172A" stroke="#94A3B8" stroke-width="14"/>
-                            <text x="100" y="34" text-anchor="middle" fill="#E2E8F0" font-size="9" font-family="monospace" letter-spacing="3">R O L E X • R O L E X</text>
-                            <!-- Micro Laser Etched Crown at 6 o'clock -->
+                            <circle cx="100" cy="100" r="82" fill="${watch.dialColor || '#0F172A'}" stroke="#94A3B8" stroke-width="14"/>
+                            <text x="100" y="34" text-anchor="middle" fill="#E2E8F0" font-size="8.5" font-family="monospace" letter-spacing="2">${brandUpper} • ${watch.ref}</text>
                             <circle cx="100" cy="142" r="22" fill="#161C28" stroke="#10B981" stroke-width="1.5" stroke-dasharray="2 2"/>
                             <circle cx="100" cy="134" r="2" fill="#10B981"/>
                             <circle cx="93" cy="136" r="1.8" fill="#10B981"/>
                             <circle cx="107" cy="136" r="1.8" fill="#10B981"/>
                             <circle cx="96" cy="145" r="1.8" fill="#10B981"/>
                             <circle cx="104" cy="145" r="1.8" fill="#10B981"/>
-                            <text x="100" y="88" text-anchor="middle" fill="#38BDF8" font-size="10" font-family="monospace" font-weight="bold">MACRO REHAUT & LUME</text>
-                            <text x="100" y="104" text-anchor="middle" fill="#94A3B8" font-size="8.5" font-family="monospace">6H MICRO LASER CROWN (LEC)</text>
+                            <text x="100" y="86" text-anchor="middle" fill="#38BDF8" font-size="9.5" font-family="monospace" font-weight="bold">${watch.model.toUpperCase().slice(0, 18)}</text>
+                            <text x="100" y="102" text-anchor="middle" fill="#D4AF37" font-size="8.5" font-family="monospace">MACRO LUME & ENGRAVING</text>
                         </svg>
-                        <span class="text-[11px] font-mono text-gold mt-1">มุมส่องขยาย 10x–30x ขอบใน Rehaut / เลเซอร์กระจก / พรายน้ำ</span>
+                        <span class="text-[11px] font-mono text-gold mt-1">มุมส่องกล้องขยาย 10x–30x ของ ${watch.brand} Ref. ${watch.ref}</span>
                     </div>
                 `;
             }
@@ -2045,36 +2050,341 @@
             reader.readAsDataURL(file);
         }
 
-        // Custom SVG Watch Dial Generator for cards & hero
+        // Model-Accurate SVG Watch Generator matching the specific watch in the database
         function generateWatchSVG(watch, sizeClass = "w-16 h-16") {
-            const isSquare = watch.brand === 'Cartier';
-            const isOctagon = watch.brand === 'Patek Philippe' || watch.brand === 'Audemars Piguet';
+            const ref = (watch.ref || '').toUpperCase();
+            const model = (watch.model || '').toLowerCase();
+            const brand = (watch.brand || '').toLowerCase();
+
+            // 1. Rolex Submariner Date 126610LN (Diver Ceramic Bezel, Mercedes Hands, Cyclops Date)
+            if (ref.includes('126610') || model.includes('submariner')) {
+                return `
+                    <svg class="${sizeClass} shrink-0 drop-shadow-md" viewBox="0 0 100 100" fill="none">
+                        <path d="M31 2 H69 L73 21 H27 Z" fill="#64748B" stroke="#334155" stroke-width="1.2"/>
+                        <line x1="43" y1="2" x2="43" y2="21" stroke="#334155" stroke-width="1"/>
+                        <line x1="57" y1="2" x2="57" y2="21" stroke="#334155" stroke-width="1"/>
+                        <path d="M27 79 H73 L69 98 H31 Z" fill="#64748B" stroke="#334155" stroke-width="1.2"/>
+                        <line x1="43" y1="79" x2="43" y2="98" stroke="#334155" stroke-width="1"/>
+                        <line x1="57" y1="79" x2="57" y2="98" stroke="#334155" stroke-width="1"/>
+                        <!-- Crown Guards & Triplock Crown -->
+                        <path d="M84 40 L90 43 V57 L84 60 Z" fill="#94A3B8"/>
+                        <rect x="89" y="44.5" width="6" height="11" rx="1.5" fill="#CBD5E1" stroke="#475569" stroke-width="1"/>
+                        <!-- Knurled Steel Outer Ring & Black Cerachrom Diver Bezel -->
+                        <circle cx="50" cy="50" r="38" fill="#18181B" stroke="#CBD5E1" stroke-width="2.2" stroke-dasharray="3 1.2"/>
+                        <circle cx="50" cy="50" r="36.5" fill="#111827" stroke="#94A3B8" stroke-width="0.8"/>
+                        <!-- Bezel Pearl at 12 & Diver Markings -->
+                        <polygon points="50,14 46,20 54,20" fill="#E2E8F0"/>
+                        <circle cx="50" cy="17.5" r="1.8" fill="#38BDF8"/>
+                        <text x="67" y="25" fill="#CBD5E1" font-size="5" font-family="monospace" font-weight="bold">10</text>
+                        <text x="76" y="42" fill="#CBD5E1" font-size="5" font-family="monospace" font-weight="bold">20</text>
+                        <text x="47" y="84" fill="#CBD5E1" font-size="5" font-family="monospace" font-weight="bold">30</text>
+                        <text x="20" y="65" fill="#CBD5E1" font-size="5" font-family="monospace" font-weight="bold">40</text>
+                        <text x="22" y="34" fill="#CBD5E1" font-size="5" font-family="monospace" font-weight="bold">50</text>
+                        <!-- Black Gloss Dial & Rehaut -->
+                        <circle cx="50" cy="50" r="27.5" fill="#090D14" stroke="#94A3B8" stroke-width="1.5"/>
+                        <!-- Submariner Chromalight Hour Markers -->
+                        <polygon points="50,31 47,25 53,25" fill="#E0F2FE" stroke="#F8FAFC" stroke-width="0.6"/>
+                        <rect x="48.5" y="69" width="3" height="6" rx="0.8" fill="#E0F2FE"/>
+                        <rect x="25" y="48.5" width="6" height="3" rx="0.8" fill="#E0F2FE"/>
+                        <circle cx="61" cy="29" r="2" fill="#E0F2FE"/>
+                        <circle cx="70" cy="38" r="2" fill="#E0F2FE"/>
+                        <circle cx="70" cy="62" r="2" fill="#E0F2FE"/>
+                        <circle cx="61" cy="71" r="2" fill="#E0F2FE"/>
+                        <circle cx="39" cy="71" r="2" fill="#E0F2FE"/>
+                        <circle cx="30" cy="62" r="2" fill="#E0F2FE"/>
+                        <circle cx="30" cy="38" r="2" fill="#E0F2FE"/>
+                        <circle cx="39" cy="29" r="2" fill="#E0F2FE"/>
+                        <!-- Cyclops Date at 3 o'clock -->
+                        <rect x="61" y="45.5" width="11.5" height="9" rx="2.5" fill="#F8FAFC" stroke="#38BDF8" stroke-width="0.9"/>
+                        <text x="66.8" y="52" text-anchor="middle" fill="#0F172A" font-size="5.8" font-family="monospace" font-weight="bold">28</text>
+                        <!-- Mercedes Hands -->
+                        <line x1="50" y1="50" x2="39" y2="39" stroke="#F8FAFC" stroke-width="2.8" stroke-linecap="round"/>
+                        <circle cx="42.5" cy="42.5" r="2.6" fill="#090D14" stroke="#F8FAFC" stroke-width="1.2"/>
+                        <line x1="50" y1="50" x2="64" y2="34" stroke="#F8FAFC" stroke-width="2.2" stroke-linecap="round"/>
+                        <line x1="46" y1="55" x2="58" y2="32" stroke="#38BDF8" stroke-width="1"/>
+                        <circle cx="50" cy="50" r="2.2" fill="#E2E8F0"/>
+                    </svg>
+                `;
+            }
+
+            // 2. Rolex Cosmograph Daytona 116500LN Panda (White Dial, 3 Black Sub-dials, Chrono Pushers, Black Tachymeter)
+            if (ref.includes('116500') || model.includes('daytona')) {
+                return `
+                    <svg class="${sizeClass} shrink-0 drop-shadow-md" viewBox="0 0 100 100" fill="none">
+                        <!-- Oyster Bracelet with Polished Center Link -->
+                        <path d="M31 2 H69 L73 21 H27 Z" fill="#64748B" stroke="#334155" stroke-width="1.2"/>
+                        <rect x="43" y="2" width="14" height="19" fill="#CBD5E1"/>
+                        <path d="M27 79 H73 L69 98 H31 Z" fill="#64748B" stroke="#334155" stroke-width="1.2"/>
+                        <rect x="43" y="79" width="14" height="19" fill="#CBD5E1"/>
+                        <!-- Chronograph Pushers at 2 & 4 + Crown at 3 -->
+                        <rect x="83" y="28" width="7" height="6" rx="1.5" transform="rotate(25 83 28)" fill="#CBD5E1" stroke="#475569" stroke-width="1"/>
+                        <rect x="88" y="45" width="6" height="10" rx="1.5" fill="#CBD5E1" stroke="#475569" stroke-width="1"/>
+                        <rect x="85" y="65" width="7" height="6" rx="1.5" transform="rotate(-25 85 65)" fill="#CBD5E1" stroke="#475569" stroke-width="1"/>
+                        <!-- Black Cerachrom Tachymeter Bezel -->
+                        <circle cx="50" cy="50" r="37" fill="#18181B" stroke="#94A3B8" stroke-width="1.8"/>
+                        <circle cx="50" cy="50" r="28.5" fill="#F8FAFC" stroke="#475569" stroke-width="1.2"/>
+                        <!-- 3 Panda Black Sub-dials at 3, 6, 9 -->
+                        <circle cx="64" cy="50" r="7.5" fill="#18181B"/>
+                        <circle cx="64" cy="50" r="4.8" fill="#F8FAFC"/>
+                        <line x1="64" y1="50" x2="64" y2="45" stroke="#18181B" stroke-width="1.2"/>
+                        <circle cx="36" cy="50" r="7.5" fill="#18181B"/>
+                        <circle cx="36" cy="50" r="4.8" fill="#F8FAFC"/>
+                        <line x1="36" y1="50" x2="33" y2="47" stroke="#18181B" stroke-width="1.2"/>
+                        <circle cx="50" cy="64" r="7.5" fill="#18181B"/>
+                        <circle cx="50" cy="64" r="4.8" fill="#F8FAFC"/>
+                        <line x1="50" y1="64" x2="53" y2="61" stroke="#18181B" stroke-width="1.2"/>
+                        <!-- Red DAYTONA Arc Text -->
+                        <path d="M43 56 Q50 53 57 56" stroke="#EF4444" stroke-width="1.5" fill="none"/>
+                        <!-- Hands -->
+                        <line x1="50" y1="50" x2="39" y2="38" stroke="#0F172A" stroke-width="2.6" stroke-linecap="round"/>
+                        <line x1="50" y1="50" x2="63" y2="35" stroke="#0F172A" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="50" y1="58" x2="50" y2="24" stroke="#EF4444" stroke-width="1.1"/>
+                        <circle cx="50" cy="50" r="2.2" fill="#94A3B8"/>
+                    </svg>
+                `;
+            }
+
+            // 3. Rolex Datejust 41 Fluted Jubilee 126334 (5-Link Jubilee Bracelet, Fluted White Gold Bezel, Sunburst Blue Dial)
+            if (ref.includes('126334') || model.includes('datejust')) {
+                return `
+                    <svg class="${sizeClass} shrink-0 drop-shadow-md" viewBox="0 0 100 100" fill="none">
+                        <!-- 5-Link Jubilee Bracelet -->
+                        <path d="M31 2 H69 L73 21 H27 Z" fill="#64748B" stroke="#334155" stroke-width="1.2"/>
+                        <line x1="39" y1="2" x2="39" y2="21" stroke="#CBD5E1" stroke-width="1.5"/>
+                        <line x1="46" y1="2" x2="46" y2="21" stroke="#F8FAFC" stroke-width="1.5"/>
+                        <line x1="54" y1="2" x2="54" y2="21" stroke="#F8FAFC" stroke-width="1.5"/>
+                        <line x1="61" y1="2" x2="61" y2="21" stroke="#CBD5E1" stroke-width="1.5"/>
+                        <path d="M27 79 H73 L69 98 H31 Z" fill="#64748B" stroke="#334155" stroke-width="1.2"/>
+                        <line x1="39" y1="79" x2="39" y2="98" stroke="#CBD5E1" stroke-width="1.5"/>
+                        <line x1="46" y1="79" x2="46" y2="98" stroke="#F8FAFC" stroke-width="1.5"/>
+                        <line x1="54" y1="79" x2="54" y2="98" stroke="#F8FAFC" stroke-width="1.5"/>
+                        <line x1="61" y1="79" x2="61" y2="98" stroke="#CBD5E1" stroke-width="1.5"/>
+                        <rect x="88" y="45" width="5.5" height="10" rx="1.5" fill="#E2E8F0" stroke="#64748B" stroke-width="1"/>
+                        <!-- 18k White Gold Fluted Bezel -->
+                        <circle cx="50" cy="50" r="36.5" fill="#CBD5E1" stroke="#94A3B8" stroke-width="1.5"/>
+                        <circle cx="50" cy="50" r="33" fill="none" stroke="#F8FAFC" stroke-width="5" stroke-dasharray="2.6 2.6"/>
+                        <!-- Sunburst Bright Blue Dial -->
+                        <circle cx="50" cy="50" r="28.5" fill="#1E3A8A" stroke="#E2E8F0" stroke-width="1.2"/>
+                        <!-- Baton Hour Markers -->
+                        <line x1="50" y1="24" x2="50" y2="29" stroke="#F8FAFC" stroke-width="2.2"/>
+                        <line x1="50" y1="71" x2="50" y2="76" stroke="#F8FAFC" stroke-width="2.2"/>
+                        <line x1="24" y1="50" x2="29" y2="50" stroke="#F8FAFC" stroke-width="2.2"/>
+                        <line x1="63" y1="27" x2="60" y2="31" stroke="#F8FAFC" stroke-width="1.8"/>
+                        <line x1="73" y1="37" x2="69" y2="40" stroke="#F8FAFC" stroke-width="1.8"/>
+                        <line x1="73" y1="63" x2="69" y2="60" stroke="#F8FAFC" stroke-width="1.8"/>
+                        <line x1="63" y1="73" x2="60" y2="69" stroke="#F8FAFC" stroke-width="1.8"/>
+                        <line x1="37" y1="73" x2="40" y2="69" stroke="#F8FAFC" stroke-width="1.8"/>
+                        <line x1="27" y1="63" x2="31" y2="60" stroke="#F8FAFC" stroke-width="1.8"/>
+                        <line x1="27" y1="37" x2="31" y2="40" stroke="#F8FAFC" stroke-width="1.8"/>
+                        <line x1="37" y1="27" x2="40" y2="31" stroke="#F8FAFC" stroke-width="1.8"/>
+                        <!-- Cyclops Date at 3 -->
+                        <rect x="61.5" y="45.5" width="11" height="9" rx="2.2" fill="#F8FAFC" stroke="#93C5FD" stroke-width="0.9"/>
+                        <text x="67" y="52" text-anchor="middle" fill="#0F172A" font-size="5.5" font-family="monospace" font-weight="bold">28</text>
+                        <!-- Hands -->
+                        <line x1="50" y1="50" x2="39" y2="39" stroke="#F8FAFC" stroke-width="2.6" stroke-linecap="round"/>
+                        <line x1="50" y1="50" x2="65" y2="35" stroke="#F8FAFC" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="50" cy="50" r="2.2" fill="#E2E8F0"/>
+                    </svg>
+                `;
+            }
+
+            // 4. Patek Philippe Nautilus 5711/1A (Rounded Octagonal Porthole Case with Ears & Horizontal Grooved Blue Dial)
+            if (ref.includes('5711') || model.includes('nautilus')) {
+                return `
+                    <svg class="${sizeClass} shrink-0 drop-shadow-md" viewBox="0 0 100 100" fill="none">
+                        <!-- Integrated Nautilus Bracelet -->
+                        <path d="M30 2 H70 L75 20 H25 Z" fill="#64748B" stroke="#334155" stroke-width="1.2"/>
+                        <rect x="42" y="2" width="16" height="18" rx="1" fill="#E2E8F0"/>
+                        <path d="M25 80 H75 L70 98 H30 Z" fill="#64748B" stroke="#334155" stroke-width="1.2"/>
+                        <rect x="42" y="80" width="16" height="18" rx="1" fill="#E2E8F0"/>
+                        <!-- Nautilus Side Hinge Ears -->
+                        <rect x="9" y="36" width="8" height="28" rx="3" fill="#94A3B8" stroke="#475569" stroke-width="1.2"/>
+                        <rect x="83" y="36" width="8" height="28" rx="3" fill="#94A3B8" stroke="#475569" stroke-width="1.2"/>
+                        <rect x="90" y="45" width="5" height="10" rx="1.5" fill="#CBD5E1"/>
+                        <!-- Rounded Octagonal Bezel -->
+                        <rect x="15" y="15" width="70" height="70" rx="22" fill="#CBD5E1" stroke="#64748B" stroke-width="2"/>
+                        <rect x="23" y="23" width="54" height="54" rx="16" fill="#1E3A5F" stroke="#94A3B8" stroke-width="1.2"/>
+                        <!-- Horizontal Nautilus Dial Grooves -->
+                        <line x1="25" y1="33" x2="75" y2="33" stroke="#0F172A" stroke-width="1.2"/>
+                        <line x1="24" y1="39" x2="76" y2="39" stroke="#0F172A" stroke-width="1.2"/>
+                        <line x1="24" y1="45" x2="76" y2="45" stroke="#0F172A" stroke-width="1.2"/>
+                        <line x1="24" y1="50" x2="76" y2="50" stroke="#0F172A" stroke-width="1.2"/>
+                        <line x1="24" y1="55" x2="76" y2="55" stroke="#0F172A" stroke-width="1.2"/>
+                        <line x1="24" y1="61" x2="76" y2="61" stroke="#0F172A" stroke-width="1.2"/>
+                        <line x1="25" y1="67" x2="75" y2="67" stroke="#0F172A" stroke-width="1.2"/>
+                        <!-- Baton Markers & Date at 3 -->
+                        <rect x="47.5" y="25" width="5" height="6" rx="1" fill="#F8FAFC"/>
+                        <rect x="48.5" y="69" width="3" height="6" rx="1" fill="#F8FAFC"/>
+                        <rect x="25" y="48.5" width="6" height="3" rx="1" fill="#F8FAFC"/>
+                        <rect x="65" y="46" width="9" height="8" rx="1" fill="#F8FAFC" stroke="#94A3B8" stroke-width="0.8"/>
+                        <text x="69.5" y="52" text-anchor="middle" fill="#0F172A" font-size="5" font-family="monospace" font-weight="bold">18</text>
+                        <!-- Nautilus Rounded Baton Hands -->
+                        <line x1="50" y1="50" x2="38" y2="40" stroke="#F8FAFC" stroke-width="3" stroke-linecap="round"/>
+                        <line x1="50" y1="50" x2="64" y2="34" stroke="#F8FAFC" stroke-width="2.4" stroke-linecap="round"/>
+                        <circle cx="50" cy="50" r="2.2" fill="#E2E8F0"/>
+                    </svg>
+                `;
+            }
+
+            // 5. Patek Philippe Aquanaut 5167A (Black Tropical Waffle Strap, Geosphere Grid Dial, Arabic Numerals)
+            if (ref.includes('5167') || model.includes('aquanaut')) {
+                return `
+                    <svg class="${sizeClass} shrink-0 drop-shadow-md" viewBox="0 0 100 100" fill="none">
+                        <!-- Black Tropical Composite Waffle Strap -->
+                        <path d="M29 2 H71 L74 20 H26 Z" fill="#1C1917" stroke="#44403C" stroke-width="1.2"/>
+                        <line x1="40" y1="2" x2="40" y2="20" stroke="#292524" stroke-width="1.2"/>
+                        <line x1="50" y1="2" x2="50" y2="20" stroke="#292524" stroke-width="1.2"/>
+                        <line x1="60" y1="2" x2="60" y2="20" stroke="#292524" stroke-width="1.2"/>
+                        <path d="M26 80 H74 L71 98 H29 Z" fill="#1C1917" stroke="#44403C" stroke-width="1.2"/>
+                        <line x1="40" y1="80" x2="40" y2="98" stroke="#292524" stroke-width="1.2"/>
+                        <line x1="50" y1="80" x2="50" y2="98" stroke="#292524" stroke-width="1.2"/>
+                        <line x1="60" y1="80" x2="60" y2="98" stroke="#292524" stroke-width="1.2"/>
+                        <rect x="86" y="45" width="6" height="10" rx="1.5" fill="#CBD5E1"/>
+                        <!-- Rounded Octagonal Brushed Steel Case -->
+                        <rect x="15" y="15" width="70" height="70" rx="24" fill="#94A3B8" stroke="#475569" stroke-width="2"/>
+                        <circle cx="50" cy="50" r="28" fill="#1C1917" stroke="#CBD5E1" stroke-width="1.2"/>
+                        <!-- Geosphere Globe Grid Lines -->
+                        <ellipse cx="50" cy="50" rx="14" ry="27" fill="none" stroke="#292524" stroke-width="1.1"/>
+                        <ellipse cx="50" cy="50" rx="27" ry="14" fill="none" stroke="#292524" stroke-width="1.1"/>
+                        <line x1="50" y1="23" x2="50" y2="77" stroke="#292524" stroke-width="1.1"/>
+                        <line x1="23" y1="50" x2="77" y2="50" stroke="#292524" stroke-width="1.1"/>
+                        <!-- Arabic Numerals & Date at 3 -->
+                        <text x="50" y="31" text-anchor="middle" fill="#F8FAFC" font-size="6.5" font-family="sans-serif" font-weight="bold">12</text>
+                        <text x="50" y="74" text-anchor="middle" fill="#F8FAFC" font-size="6.5" font-family="sans-serif" font-weight="bold">6</text>
+                        <text x="29" y="52.5" text-anchor="middle" fill="#F8FAFC" font-size="6.5" font-family="sans-serif" font-weight="bold">9</text>
+                        <rect x="64" y="46.5" width="8.5" height="7" rx="1" fill="#F8FAFC"/>
+                        <!-- Hands -->
+                        <line x1="50" y1="50" x2="39" y2="39" stroke="#F8FAFC" stroke-width="3" stroke-linecap="round"/>
+                        <line x1="50" y1="50" x2="64" y2="35" stroke="#F8FAFC" stroke-width="2.2" stroke-linecap="round"/>
+                        <circle cx="50" cy="50" r="2.2" fill="#F59E0B"/>
+                    </svg>
+                `;
+            }
+
+            // 6. Cartier Santos Large WSSA0018 (Square Case with 8 Screws, Roman Numerals, Blued-Steel Sword Hands, Blue Spinel Crown)
+            if (ref.includes('WSSA') || brand.includes('cartier') || model.includes('santos')) {
+                return `
+                    <svg class="${sizeClass} shrink-0 drop-shadow-md" viewBox="0 0 100 100" fill="none">
+                        <!-- Santos SmartLink Bracelet with Screws -->
+                        <path d="M30 2 H70 L73 17 H27 Z" fill="#94A3B8" stroke="#475569" stroke-width="1.2"/>
+                        <path d="M27 83 H73 L70 98 H30 Z" fill="#94A3B8" stroke="#475569" stroke-width="1.2"/>
+                        <!-- Blue Spinel Cabochon Crown -->
+                        <rect x="86" y="45" width="5" height="10" rx="1" fill="#CBD5E1"/>
+                        <polygon points="91,46 96,50 91,54" fill="#2563EB"/>
+                        <!-- Square Santos Case & 8 Screw Bezel -->
+                        <rect x="16" y="16" width="68" height="68" rx="14" fill="#CBD5E1" stroke="#64748B" stroke-width="2"/>
+                        <rect x="23" y="23" width="54" height="54" rx="8" fill="#F8FAFC" stroke="#475569" stroke-width="1.2"/>
+                        <!-- 8 Bezel Screws -->
+                        <circle cx="20" cy="28" r="1.4" fill="#475569"/><circle cx="20" cy="72" r="1.4" fill="#475569"/>
+                        <circle cx="80" cy="28" r="1.4" fill="#475569"/><circle cx="80" cy="72" r="1.4" fill="#475569"/>
+                        <circle cx="32" cy="19.5" r="1.4" fill="#475569"/><circle cx="68" cy="19.5" r="1.4" fill="#475569"/>
+                        <circle cx="32" cy="80.5" r="1.4" fill="#475569"/><circle cx="68" cy="80.5" r="1.4" fill="#475569"/>
+                        <!-- Railroad Minute Track & Roman Numerals -->
+                        <rect x="31" y="31" width="38" height="38" rx="3" fill="none" stroke="#0F172A" stroke-width="1" stroke-dasharray="1.5 1"/>
+                        <text x="50" y="29.5" text-anchor="middle" fill="#0F172A" font-size="5.5" font-family="serif" font-weight="bold">XII</text>
+                        <text x="73" y="52" text-anchor="middle" fill="#0F172A" font-size="5.5" font-family="serif" font-weight="bold">III</text>
+                        <text x="27" y="52" text-anchor="middle" fill="#0F172A" font-size="5.5" font-family="serif" font-weight="bold">IX</text>
+                        <rect x="46.5" y="70" width="7" height="5.5" rx="0.8" fill="#E2E8F0" stroke="#475569" stroke-width="0.6"/>
+                        <!-- Blued-Steel Sword Hands -->
+                        <line x1="50" y1="50" x2="39" y2="39" stroke="#1D4ED8" stroke-width="2.6" stroke-linecap="round"/>
+                        <line x1="50" y1="50" x2="63" y2="35" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="50" cy="50" r="2" fill="#1E3A8A"/>
+                    </svg>
+                `;
+            }
+
+            // 7. Audemars Piguet Royal Oak 15500ST (Octagonal Bezel with 8 Hex Screws & Grande Tapisserie Waffle Dial)
+            if (ref.includes('15500') || brand.includes('audemars') || model.includes('royal oak')) {
+                return `
+                    <svg class="${sizeClass} shrink-0 drop-shadow-md" viewBox="0 0 100 100" fill="none">
+                        <!-- Royal Oak Integrated Tapering Bracelet with 2 Studs -->
+                        <path d="M27 2 H73 L77 18 H23 Z" fill="#94A3B8" stroke="#475569" stroke-width="1.2"/>
+                        <rect x="37" y="2" width="7" height="16" fill="#E2E8F0"/>
+                        <rect x="56" y="2" width="7" height="16" fill="#E2E8F0"/>
+                        <path d="M23 82 H77 L73 98 H27 Z" fill="#94A3B8" stroke="#475569" stroke-width="1.2"/>
+                        <rect x="37" y="82" width="7" height="16" fill="#E2E8F0"/>
+                        <rect x="56" y="82" width="7" height="16" fill="#E2E8F0"/>
+                        <rect x="87" y="45" width="5.5" height="10" rx="1" fill="#CBD5E1" stroke="#475569" stroke-width="1"/>
+                        <!-- Octagonal Royal Oak Bezel -->
+                        <polygon points="33,12 67,12 88,33 88,67 67,88 33,88 12,67 12,33" fill="#CBD5E1" stroke="#475569" stroke-width="2"/>
+                        <!-- 8 White Gold Hex Screws on Bezel Corners -->
+                        <circle cx="35" cy="17" r="2" fill="#F8FAFC" stroke="#334155" stroke-width="0.9"/>
+                        <circle cx="65" cy="17" r="2" fill="#F8FAFC" stroke="#334155" stroke-width="0.9"/>
+                        <circle cx="83" cy="35" r="2" fill="#F8FAFC" stroke="#334155" stroke-width="0.9"/>
+                        <circle cx="83" cy="65" r="2" fill="#F8FAFC" stroke="#334155" stroke-width="0.9"/>
+                        <circle cx="65" cy="83" r="2" fill="#F8FAFC" stroke="#334155" stroke-width="0.9"/>
+                        <circle cx="35" cy="83" r="2" fill="#F8FAFC" stroke="#334155" stroke-width="0.9"/>
+                        <circle cx="17" cy="65" r="2" fill="#F8FAFC" stroke="#334155" stroke-width="0.9"/>
+                        <circle cx="17" cy="35" r="2" fill="#F8FAFC" stroke="#334155" stroke-width="0.9"/>
+                        <!-- Grande Tapisserie Waffle Dial -->
+                        <circle cx="50" cy="50" r="27.5" fill="#111827" stroke="#475569" stroke-width="1.5"/>
+                        <line x1="32" y1="38" x2="68" y2="38" stroke="#1E293B" stroke-width="1.2"/>
+                        <line x1="28" y1="46" x2="72" y2="46" stroke="#1E293B" stroke-width="1.2"/>
+                        <line x1="28" y1="54" x2="72" y2="54" stroke="#1E293B" stroke-width="1.2"/>
+                        <line x1="32" y1="62" x2="68" y2="62" stroke="#1E293B" stroke-width="1.2"/>
+                        <line x1="38" y1="32" x2="38" y2="68" stroke="#1E293B" stroke-width="1.2"/>
+                        <line x1="46" y1="28" x2="46" y2="72" stroke="#1E293B" stroke-width="1.2"/>
+                        <line x1="54" y1="28" x2="54" y2="72" stroke="#1E293B" stroke-width="1.2"/>
+                        <line x1="62" y1="32" x2="62" y2="68" stroke="#1E293B" stroke-width="1.2"/>
+                        <!-- AP Logo & Date at 3 -->
+                        <text x="50" y="34" text-anchor="middle" fill="#F8FAFC" font-size="5.5" font-family="serif" font-weight="bold">AP</text>
+                        <rect x="65" y="46.5" width="7.5" height="7" rx="1" fill="#1E293B" stroke="#F8FAFC" stroke-width="0.8"/>
+                        <line x1="50" y1="50" x2="39" y2="39" stroke="#F8FAFC" stroke-width="2.6" stroke-linecap="round"/>
+                        <line x1="50" y1="50" x2="64" y2="35" stroke="#F8FAFC" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="50" cy="50" r="2.2" fill="#E2E8F0"/>
+                    </svg>
+                `;
+            }
+
+            // 8. Omega Speedmaster Moonwatch 310.30.42.50.01.002 (Black Tachymeter, 3 Recessed Black Sub-dials, White Baton Hands)
+            if (ref.includes('310.30') || brand.includes('omega') || model.includes('speedmaster') || model.includes('moonwatch')) {
+                return `
+                    <svg class="${sizeClass} shrink-0 drop-shadow-md" viewBox="0 0 100 100" fill="none">
+                        <!-- 5-Link Moonwatch Bracelet -->
+                        <path d="M31 2 H69 L73 21 H27 Z" fill="#64748B" stroke="#334155" stroke-width="1.2"/>
+                        <path d="M27 79 H73 L69 98 H31 Z" fill="#64748B" stroke="#334155" stroke-width="1.2"/>
+                        <!-- Pump Chronograph Pushers -->
+                        <circle cx="86" cy="33" r="3" fill="#CBD5E1"/>
+                        <rect x="88" y="45" width="5" height="10" rx="1" fill="#CBD5E1"/>
+                        <circle cx="86" cy="67" r="3" fill="#CBD5E1"/>
+                        <!-- Black Tachymeter Bezel (DON) -->
+                        <circle cx="50" cy="50" r="37" fill="#0F172A" stroke="#94A3B8" stroke-width="1.6"/>
+                        <circle cx="50" cy="50" r="30" fill="#111827" stroke="#334155" stroke-width="1"/>
+                        <!-- 3 Close-Spaced Moonwatch Sub-dials at 3, 6, 9 -->
+                        <circle cx="62.5" cy="50" r="6.8" fill="#090D14" stroke="#475569" stroke-width="0.9"/>
+                        <line x1="62.5" y1="50" x2="62.5" y2="45" stroke="#F8FAFC" stroke-width="1.1"/>
+                        <circle cx="37.5" cy="50" r="6.8" fill="#090D14" stroke="#475569" stroke-width="0.9"/>
+                        <line x1="37.5" y1="50" x2="34" y2="50" stroke="#F8FAFC" stroke-width="1.1"/>
+                        <circle cx="50" cy="62.5" r="6.8" fill="#090D14" stroke="#475569" stroke-width="0.9"/>
+                        <line x1="50" y1="62.5" x2="50" y2="57.5" stroke="#F8FAFC" stroke-width="1.1"/>
+                        <!-- 12 o'clock Speedmaster Twin Dots & White Baton Hands -->
+                        <circle cx="48" cy="24.5" r="1" fill="#F8FAFC"/>
+                        <circle cx="52" cy="24.5" r="1" fill="#F8FAFC"/>
+                        <line x1="50" y1="50" x2="39" y2="39" stroke="#F8FAFC" stroke-width="2.4" stroke-linecap="round"/>
+                        <line x1="50" y1="50" x2="64" y2="34" stroke="#F8FAFC" stroke-width="1.9" stroke-linecap="round"/>
+                        <line x1="50" y1="57" x2="50" y2="23" stroke="#F8FAFC" stroke-width="1"/>
+                        <circle cx="50" cy="50" r="2" fill="#F8FAFC"/>
+                    </svg>
+                `;
+            }
+
+            // Fallback for custom watches (adapts to brand & model keywords like Pepsi / Batman / Gold)
+            const isPepsi = ref.includes('BLRO') || model.includes('pepsi');
+            const isBatman = ref.includes('BLNR') || model.includes('batman') || model.includes('batgirl');
             return `
                 <svg class="${sizeClass} shrink-0 drop-shadow-md" viewBox="0 0 100 100" fill="none">
-                    <!-- Strap Top/Bottom -->
-                    <path d="M32 4 H68 L72 20 H28 Z" fill="#334155" stroke="#475569" stroke-width="1.5"/>
-                    <path d="M28 80 H72 L68 96 H32 Z" fill="#334155" stroke="#475569" stroke-width="1.5"/>
-                    <!-- Crown -->
+                    <path d="M32 4 H68 L72 20 H28 Z" fill="#475569" stroke="#334155" stroke-width="1.5"/>
+                    <path d="M28 80 H72 L68 96 H32 Z" fill="#475569" stroke="#334155" stroke-width="1.5"/>
                     <rect x="88" y="44" width="6" height="12" rx="2" fill="#D4AF37" />
-                    <!-- Bezel & Case -->
-                    ${isSquare ? `
-                        <rect x="16" y="16" width="68" height="68" rx="14" fill="${watch.bezelColor}" stroke="#94A3B8" stroke-width="2.5"/>
-                        <rect x="24" y="24" width="52" height="52" rx="8" fill="${watch.dialColor}" stroke="#D4AF37" stroke-width="1"/>
-                    ` : isOctagon ? `
-                        <polygon points="32,14 68,14 86,32 86,68 68,86 32,86 14,68 14,32" fill="${watch.bezelColor}" stroke="#94A3B8" stroke-width="2.5"/>
-                        <circle cx="50" cy="50" r="28" fill="${watch.dialColor}" stroke="#D4AF37" stroke-width="1.2"/>
-                    ` : `
-                        <circle cx="50" cy="50" r="36" fill="${watch.bezelColor}" stroke="#94A3B8" stroke-width="2.5"/>
-                        <circle cx="50" cy="50" r="27" fill="${watch.dialColor}" stroke="#D4AF37" stroke-width="1.2"/>
-                        <circle cx="50" cy="18" r="2.2" fill="#F8FAFC"/>
-                    `}
-                    <!-- Hour Markers -->
+                    <circle cx="50" cy="50" r="36" fill="${isPepsi ? '#1E3A8A' : isBatman ? '#1D4ED8' : (watch.bezelColor || '#1E293B')}" stroke="#94A3B8" stroke-width="2.5"/>
+                    ${isPepsi ? `<path d="M14 50 A36 36 0 0 0 86 50 Z" fill="#B91C1C"/>` : isBatman ? `<path d="M14 50 A36 36 0 0 1 86 50 Z" fill="#111827"/>` : ''}
+                    <circle cx="50" cy="50" r="27" fill="${watch.dialColor || '#0F172A'}" stroke="#D4AF37" stroke-width="1.2"/>
+                    <circle cx="50" cy="18" r="2.2" fill="#F8FAFC"/>
+                    <text x="50" y="38" text-anchor="middle" fill="#D4AF37" font-size="5.2" font-family="monospace" font-weight="bold">${(watch.ref || watch.brand || '').slice(0, 8)}</text>
                     <line x1="50" y1="27" x2="50" y2="32" stroke="#F8FAFC" stroke-width="2" stroke-linecap="round"/>
                     <line x1="50" y1="68" x2="50" y2="73" stroke="#F8FAFC" stroke-width="2" stroke-linecap="round"/>
                     <line x1="27" y1="50" x2="32" y2="50" stroke="#F8FAFC" stroke-width="2" stroke-linecap="round"/>
-                    <!-- Cyclops Date at 3 o'clock -->
                     <rect x="63" y="46.5" width="9" height="7" rx="1.5" fill="#F8FAFC" stroke="#D4AF37" stroke-width="0.8"/>
-                    <!-- Hands -->
                     <line x1="50" y1="50" x2="40" y2="37" stroke="#F8FAFC" stroke-width="2.6" stroke-linecap="round"/>
                     <line x1="50" y1="50" x2="64" y2="36" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"/>
                     <circle cx="50" cy="50" r="2.8" fill="#D4AF37"/>
@@ -2487,6 +2797,7 @@
                         ${WATCH_IMAGE_ANGLES.map(ang => {
                             const isAct = ang.key === activeGalleryAngle;
                             const hasPhoto = Boolean(w.images && w.images[ang.key]);
+                            const fallbackFrontPhoto = getWatchPrimaryPhoto(w);
                             return `
                                 <button onclick="setGalleryAngle('${ang.key}')" class="p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between gap-2 ${isAct ? 'bg-gold/15 border-gold shadow-md' : 'bg-obsidian/70 border-slateBorder hover:border-gold/50'}">
                                     <div class="flex items-center justify-between w-full">
@@ -2496,14 +2807,21 @@
                                         ${hasPhoto ? `
                                             <span class="px-1.5 py-0.2 rounded bg-authGreen/20 text-authGreen text-[9px] font-mono border border-authGreen/40">มีรูปจริง</span>
                                         ` : `
-                                            <span class="px-1.5 py-0.2 rounded bg-slateCard text-slate-400 text-[9px] font-mono">แผนผัง</span>
+                                            <span class="px-1.5 py-0.2 rounded bg-slateCard text-slate-400 text-[9px] font-mono">รูปฐานข้อมูล</span>
                                         `}
                                     </div>
                                     <div class="w-full h-16 rounded-lg overflow-hidden bg-obsidian border border-slateBorder/80 flex items-center justify-center relative">
                                         ${hasPhoto ? `
                                             <img src="${w.images[ang.key]}" alt="${ang.shortLabel}" class="w-full h-full object-cover">
+                                        ` : (ang.key === 'front' && fallbackFrontPhoto) ? `
+                                            <img src="${fallbackFrontPhoto}" alt="${ang.shortLabel}" class="w-full h-full object-cover">
+                                        ` : ang.key === 'front' ? `
+                                            ${generateWatchSVG(w, 'w-14 h-14')}
                                         ` : `
-                                            <i class="${ang.icon} text-xl ${isAct ? 'text-gold' : 'text-slate-500'}"></i>
+                                            <div class="flex items-center gap-1.5">
+                                                ${generateWatchSVG(w, 'w-11 h-11')}
+                                                <i class="${ang.icon} text-xs ${isAct ? 'text-gold' : 'text-slate-400'}"></i>
+                                            </div>
                                         `}
                                     </div>
                                 </button>
@@ -2985,6 +3303,27 @@
         }
 
         function closeManagePhotosModal() {
+            // Auto-save any non-empty URL inputs before closing
+            if (managingPhotosWatchId) {
+                const w = watchDB.find(item => item.id === managingPhotosWatchId);
+                if (w) {
+                    if (!w.images) w.images = { front: '', movement: '', bezel: '', clasp: '', macro: '' };
+                    let updated = false;
+                    WATCH_IMAGE_ANGLES.forEach(ang => {
+                        const inputEl = document.getElementById(`urlInput_${w.id}_${ang.key}`);
+                        if (inputEl && inputEl.value.trim()) {
+                            w.images[ang.key] = inputEl.value.trim();
+                            updated = true;
+                        }
+                    });
+                    if (updated) {
+                        saveDatabase();
+                        renderCatalog();
+                        renderSelectedWatchDetail();
+                        showToast('บันทึกรูปภาพเข้าสู่ฐานข้อมูลเรียบร้อย!', 'success');
+                    }
+                }
+            }
             document.getElementById('managePhotosModal').classList.add('hidden');
             managingPhotosWatchId = null;
         }
@@ -3014,9 +3353,9 @@
                             ${imgSrc ? `
                                 <img src="${imgSrc}" alt="${ang.label}" class="w-full h-full object-contain">
                             ` : `
-                                <div class="text-center p-3 text-slate-500">
-                                    <i class="${ang.icon} text-2xl mb-1 block text-slate-600"></i>
-                                    <span class="text-[11px]">ยังไม่ได้อัปโหลดรูปจริง (แสดงแผนผังแทน)</span>
+                                <div class="flex flex-col items-center justify-center p-2 text-slate-400">
+                                    ${generateWatchSVG(w, 'w-20 h-20')}
+                                    <span class="text-[10px] mt-1 text-slate-500">รูปจำลองรุ่น ${w.ref} (อัปโหลดรูปจริงทับได้)</span>
                                 </div>
                             `}
                         </div>
